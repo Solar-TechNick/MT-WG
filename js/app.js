@@ -162,7 +162,7 @@ function showTab(tabName) {
     }
 }
 
-// Global function for output tabs
+// Global function for output tabs (legacy)
 function showOutputTab(tabName) {
     // Hide all output tab contents
     document.querySelectorAll('.output-tab-content').forEach(tab => {
@@ -182,6 +182,31 @@ function showOutputTab(tabName) {
 
     // Activate corresponding output tab button
     const activeBtn = document.querySelector(`[onclick="showOutputTab('${tabName}')"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+}
+
+// Global function for demo-style config tabs
+function showConfigTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('#wg-output .tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Remove active class from all tab buttons
+    document.querySelectorAll('#wg-output .tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Show selected tab
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+
+    // Activate corresponding tab button
+    const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
     if (activeBtn) {
         activeBtn.classList.add('active');
     }

@@ -258,32 +258,47 @@
         </label>
     </div>
 
-    <!-- Output Area -->
-    <div id="wg-output" class="output-area" style="display: none;">
-        <div class="output-tabs">
-            <button class="output-tab-btn active" onclick="showOutputTab('both')">All Configurations</button>
-            <button class="output-tab-btn" onclick="showOutputTab('wireguard')">WireGuard Configs</button>
-            <button class="output-tab-btn" onclick="showOutputTab('mikrotik')">MikroTik Scripts</button>
-        </div>
-        
-        <div id="output-both" class="output-tab-content active">
-            <h3>Generated Configuration</h3>
-            <div id="wg-config-sections">
-                <!-- Dynamic configuration sections will be added here -->
+    <!-- Output Area - Demo Style 3-Tab Layout -->
+    <div id="wg-output" class="output-section" style="display: none;">
+        <div class="tabs">
+            <div class="tooltip-container">
+                <button class="tab-button active" data-tab="wireguard" onclick="showConfigTab('wireguard')">WireGuard Config</button>
+                <button type="button" class="info-btn">?
+                    <div class="tooltip">Standard WireGuard configuration files that can be imported into any WireGuard client</div>
+                </button>
+            </div>
+            <div class="tooltip-container">
+                <button class="tab-button" data-tab="mikrotik" onclick="showConfigTab('mikrotik')">MikroTik Script</button>
+                <button type="button" class="info-btn">?
+                    <div class="tooltip">Ready-to-use RouterOS commands for configuring WireGuard on MikroTik devices</div>
+                </button>
+            </div>
+            <div class="tooltip-container">
+                <button class="tab-button" data-tab="qr" onclick="showConfigTab('qr')">QR Codes</button>
+                <button type="button" class="info-btn">?
+                    <div class="tooltip">QR codes for easy mobile device configuration - scan with WireGuard mobile app</div>
+                </button>
             </div>
         </div>
-        
-        <div id="output-wireguard" class="output-tab-content">
+
+        <div class="tab-content active" id="wireguard-tab">
             <h3>WireGuard Configuration Files</h3>
-            <div id="wg-only-sections">
-                <!-- WireGuard-only sections will be added here -->
+            <div id="wireguardOutput">
+                <!-- WireGuard configs will be populated here -->
             </div>
         </div>
-        
-        <div id="output-mikrotik" class="output-tab-content">
+
+        <div class="tab-content" id="mikrotik-tab">
             <h3>MikroTik RouterOS Scripts</h3>
-            <div id="mt-only-sections">
-                <!-- MikroTik-only sections will be added here -->
+            <div id="mikrotikOutput">
+                <!-- MikroTik scripts will be populated here -->
+            </div>
+        </div>
+
+        <div class="tab-content" id="qr-tab">
+            <h3>QR Codes for Mobile Devices</h3>
+            <div id="qrOutput">
+                <!-- QR codes will be populated here -->
             </div>
         </div>
         

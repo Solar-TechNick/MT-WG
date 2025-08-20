@@ -448,43 +448,200 @@ input[type="checkbox"] {
     color: white;
 }
 
-/* Output tabs */
-.output-tabs {
+/* Demo-style Output Tabs */
+.output-section {
+    margin-top: 30px;
+}
+
+.tabs {
     display: flex;
-    border-bottom: 2px solid #ecf0f1;
-    margin-bottom: 20px;
-    gap: 2px;
+    background: #f8f9fa;
+    flex-wrap: wrap;
+    gap: 0;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
 }
 
-.output-tab-btn {
-    padding: 12px 20px;
+.tabs .tooltip-container {
+    position: relative;
+    display: flex;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 15px;
     border: none;
-    background: #ecf0f1;
-    color: #34495e;
+    background: transparent;
     cursor: pointer;
-    font-size: 14px;
     font-weight: 500;
-    border-radius: 6px 6px 0 0;
-    transition: all 0.3s ease;
-    border-bottom: 3px solid transparent;
+    transition: background-color 0.3s ease;
+    color: #495057;
+    font-size: 14px;
 }
 
-.output-tab-btn:hover {
-    background: #d5dbdb;
+.tab-button:hover {
+    background: #e9ecef;
 }
 
-.output-tab-btn.active {
-    background: #3498db;
+.tab-button.active {
+    background: #667eea;
     color: white;
-    border-bottom-color: #2980b9;
 }
 
-.output-tab-content {
+.tab-content {
     display: none;
+    padding: 30px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
 }
 
-.output-tab-content.active {
+.tab-content.active {
     display: block;
+}
+
+.tab-content h3 {
+    margin-bottom: 20px;
+    color: #495057;
+}
+
+.tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #6c757d;
+    color: white;
+    border: none;
+    font-size: 12px;
+    cursor: help;
+    transition: background-color 0.3s ease;
+}
+
+.info-btn:hover {
+    background: #495057;
+}
+
+.tooltip {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+    max-width: 250px;
+    white-space: normal;
+}
+
+.info-btn:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Demo-style config output sections */
+.config-output {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.config-output h4 {
+    margin-bottom: 15px;
+    color: #495057;
+    font-weight: 500;
+}
+
+.code-block {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 15px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.config-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.qr-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.qr-item h4 {
+    margin-bottom: 15px;
+    color: #495057;
+}
+
+.qr-container {
+    margin-bottom: 15px;
+}
+
+.qr-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.info-message {
+    background: #d1ecf1;
+    color: #0c5460;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #bee5eb;
+    text-align: center;
+    font-style: italic;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #f5c6cb;
+    text-align: center;
+}
+
+.loading {
+    background: #fff3cd;
+    color: #856404;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #ffeaa7;
+    text-align: center;
+    font-style: italic;
 }
 
 /* Responsive design */

@@ -635,59 +635,111 @@ PersistentKeepalive = ${config.server.keepalive}
         return scripts;
     }
 
-    // Generate enhanced collapsible sections
+    // Generate demo-style separated output sections
     generateEnhancedSections(config, outputType) {
         // Clear all output containers
-        const bothContainer = document.getElementById('wg-config-sections');
-        const wgOnlyContainer = document.getElementById('wg-only-sections');
-        const mtOnlyContainer = document.getElementById('mt-only-sections');
+        const wireguardOutput = document.getElementById('wireguardOutput');
+        const mikrotikOutput = document.getElementById('mikrotikOutput');
+        const qrOutput = document.getElementById('qrOutput');
         
-        bothContainer.innerHTML = '';
-        wgOnlyContainer.innerHTML = '';
-        mtOnlyContainer.innerHTML = '';
+        if (wireguardOutput) wireguardOutput.innerHTML = '';
+        if (mikrotikOutput) mikrotikOutput.innerHTML = '';
+        if (qrOutput) qrOutput.innerHTML = '';
 
         if (config.type === 'site-to-site') {
-            // Site-to-site only supports MikroTik RouterOS scripts
-            if (outputType === 'wireguard') {
-                showNotification('Site-to-site configurations only support MikroTik RouterOS scripts', 'info');
-                return;
-            }
-
+            // Site-to-site configurations
             const scripts = this.generateSiteToSiteScripts();
             
+            // Populate MikroTik tab with site scripts
             Object.entries(scripts).forEach(([siteName, script]) => {
-                this.createConfigSection(bothContainer, siteName, script, 'mikrotik');
-                this.createConfigSection(mtOnlyContainer, siteName, script, 'mikrotik');
+                this.createDemoConfigSection(mikrotikOutput, siteName, script, 'mikrotik');
             });
 
+            // No WireGuard configs for site-to-site (MikroTik only)
+            if (wireguardOutput) {
+                wireguardOutput.innerHTML = '<div class="info-message">Site-to-site configurations use MikroTik RouterOS scripts only.</div>';
+            }
+
+            // No QR codes for site-to-site
+            if (qrOutput) {
+                qrOutput.innerHTML = '<div class="info-message">QR codes are only available for client-server configurations.</div>';
+            }
+
         } else {
-            // Client-server configuration - handle different output types
+            // Client-server configuration
             const serverScript = this.generateServerScript();
             const clientConfigs = this.generateClientConfigs();
             
-            // Populate "All Configurations" tab
-            if (outputType === 'both') {
-                this.createConfigSection(bothContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
+            // Populate WireGuard tab
+            if (wireguardOutput && (outputType === 'wireguard' || outputType === 'both')) {
                 clientConfigs.forEach(client => {
-                    this.createConfigSection(bothContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
-                });
-            } else if (outputType === 'mikrotik') {
-                this.createConfigSection(bothContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
-            } else if (outputType === 'wireguard') {
-                clientConfigs.forEach(client => {
-                    this.createConfigSection(bothContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
+                    this.createDemoConfigSection(wireguardOutput, client.name, client.config, 'wireguard');
                 });
             }
-            
-            // Always populate individual tabs for tabbed view
-            this.createConfigSection(mtOnlyContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
-            clientConfigs.forEach(client => {
-                this.createConfigSection(wgOnlyContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
-            });
+
+            // Populate MikroTik tab
+            if (mikrotikOutput && (outputType === 'mikrotik' || outputType === 'both')) {
+                this.createDemoConfigSection(mikrotikOutput, config.server.name + ' (Server)', serverScript, 'mikrotik');
+            }
+
+            // Populate QR codes tab
+            if (qrOutput && (outputType === 'wireguard' || outputType === 'both')) {
+                this.generateQRCodes(clientConfigs, qrOutput);
+            }
         }
     }
 
-    // Create individual collapsible configuration section
+    // Create demo-style configuration section
+    createDemoConfigSection(container, name, content, type) {
+        const section = document.createElement('div');
+        section.className = 'config-output';
+        
+        const fileExt = type === 'mikrotik' ? '.rsc' : '.conf';
+        const sectionId = 'config-' + Math.random().toString(36).substr(2, 9);
+        
+        section.innerHTML = `
+            <h4>${name}</h4>
+            <pre class="code-block" id="${sectionId}">${content}</pre>
+            <div class="config-actions">
+                <button class="btn btn-secondary" onclick="copyConfigContent('${sectionId}')">Copy</button>
+                <button class="btn btn-primary" onclick="downloadConfig('${sectionId}', '${name}', '${type}')">Download ${fileExt}</button>
+            </div>
+        `;
+        
+        container.appendChild(section);
+    }
+
+    // Generate QR codes for demo-style output
+    async generateQRCodes(clientConfigs, container) {
+        container.innerHTML = '<div class="loading">Generating QR codes...</div>';
+        
+        try {
+            const qrCodes = await window.qrGenerator.generateClientQRCodes(clientConfigs);
+            container.innerHTML = '';
+            
+            qrCodes.forEach((qr, index) => {
+                const qrItem = document.createElement('div');
+                qrItem.className = 'qr-item';
+                
+                qrItem.innerHTML = `
+                    <h4>${qr.name}</h4>
+                    <div class="qr-container">
+                        <img src="${qr.qrDataUrl}" alt="QR Code for ${qr.name}" style="max-width: 250px; border: 1px solid #ddd;">
+                    </div>
+                    <div class="qr-actions">
+                        <button class="btn btn-secondary" onclick="downloadQRImage('${qr.qrDataUrl}', '${qr.name}')">Download QR</button>
+                    </div>
+                `;
+                
+                container.appendChild(qrItem);
+            });
+            
+        } catch (error) {
+            container.innerHTML = '<div class="error-message">Failed to generate QR codes: ' + error.message + '</div>';
+        }
+    }
+
+    // Create individual collapsible configuration section (legacy)
     createConfigSection(container, initialName, content, type) {
         const section = document.createElement('div');
         section.className = 'config-section';
@@ -760,6 +812,47 @@ async function generateKeys() {
         console.error('Error generating keys:', error);
         showNotification(`Error: ${error.message}`, 'error');
     }
+}
+
+// Demo-style helper functions
+function copyConfigContent(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        navigator.clipboard.writeText(element.textContent).then(() => {
+            showNotification('Configuration copied to clipboard', 'success');
+        }).catch(err => {
+            console.error('Copy failed:', err);
+            showNotification('Failed to copy configuration', 'error');
+        });
+    }
+}
+
+function downloadConfig(elementId, name, type) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        const content = element.textContent;
+        const fileExt = type === 'mikrotik' ? '.rsc' : '.conf';
+        const filename = `${name}${fileExt}`;
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        showNotification(`Downloaded ${filename}`, 'success');
+    }
+}
+
+function downloadQRImage(dataUrl, name) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `${name}-QR.png`;
+    a.click();
+    
+    showNotification(`Downloaded ${name}-QR.png`, 'success');
 }
 
 async function downloadQRCodes() {
