@@ -23,6 +23,19 @@ class WireGuardConfig {
                 }
             });
         });
+
+        // IPv6 toggle
+        const ipv6Checkbox = document.getElementById('wg-enable-ipv6');
+        if (ipv6Checkbox) {
+            ipv6Checkbox.addEventListener('change', (e) => {
+                const ipv6Config = document.querySelector('.ipv6-config');
+                if (e.target.checked) {
+                    ipv6Config.style.display = 'block';
+                } else {
+                    ipv6Config.style.display = 'none';
+                }
+            });
+        }
     }
 
     // Generate Curve25519 key pair using WebCrypto API
@@ -117,6 +130,11 @@ class WireGuardConfig {
             const keepalive = document.getElementById('wg-keepalive').value || '25';
             const enableNat = document.getElementById('wg-enable-nat').checked;
             const enableFirewall = document.getElementById('wg-enable-firewall').checked;
+            const dnsServers = document.getElementById('wg-dns-servers').value || '1.1.1.1, 8.8.8.8';
+            const allowedIPs = document.getElementById('wg-allowed-ips').value || '0.0.0.0/0';
+            const routingTable = document.getElementById('wg-routing-table').value;
+            const enableIPv6 = document.getElementById('wg-enable-ipv6').checked;
+            const ipv6Network = document.getElementById('wg-ipv6-network').value || 'fd00::/64';
             const keyMode = document.querySelector('input[name="key-mode"]:checked').value;
 
             // Handle different configuration types
@@ -189,7 +207,12 @@ class WireGuardConfig {
                     mtu: mtu,
                     keepalive: keepalive,
                     enableNat: enableNat,
-                    enableFirewall: enableFirewall
+                    enableFirewall: enableFirewall,
+                    dnsServers: dnsServers,
+                    allowedIPs: allowedIPs,
+                    routingTable: routingTable,
+                    enableIPv6: enableIPv6,
+                    ipv6Network: ipv6Network
                 },
                 clients: clients,
                 subnet: subnet
@@ -272,14 +295,14 @@ class WireGuardConfig {
             const clientConfig = `[Interface]
 PrivateKey = ${client.privateKey}
 Address = ${client.address}
-DNS = 1.1.1.1, 8.8.8.8
+DNS = ${config.server.dnsServers}
 MTU = ${config.server.mtu}
 
 [Peer]
 PublicKey = ${config.server.publicKey}
 PresharedKey = ${client.presharedKey}
 Endpoint = ${config.server.endpoint}:${config.server.port}
-AllowedIPs = 0.0.0.0/0
+AllowedIPs = ${config.server.allowedIPs}
 PersistentKeepalive = ${config.server.keepalive}
 `;
 
@@ -489,6 +512,57 @@ function downloadQRCodes() {
         console.error('Error generating QR codes:', error);
         showNotification(`Error: ${error.message}`, 'error');
     }
+}
+
+function downloadConfigFiles() {
+    try {
+        const config = window.wireGuardConfig.configs;
+        
+        if (!config) {
+            showNotification('No configuration available. Generate WireGuard config first.', 'error');
+            return;
+        }
+
+        if (config.type === 'site-to-site') {
+            // Download site-to-site scripts
+            const scripts = window.wireGuardConfig.generateSiteToSiteScripts();
+            
+            Object.entries(scripts).forEach(([siteName, script]) => {
+                downloadTextFile(`${siteName}-WireGuard.rsc`, script);
+            });
+            
+            showNotification(`Downloaded ${Object.keys(scripts).length} RouterOS scripts`, 'success');
+            
+        } else {
+            // Download server script
+            const serverScript = window.wireGuardConfig.generateServerScript();
+            downloadTextFile('WireGuard-Server.rsc', serverScript);
+            
+            // Download client configs
+            const clientConfigs = window.wireGuardConfig.generateClientConfigs();
+            clientConfigs.forEach(client => {
+                downloadTextFile(`${client.name}.conf`, client.config);
+            });
+            
+            showNotification(`Downloaded server script and ${clientConfigs.length} client configs`, 'success');
+        }
+
+    } catch (error) {
+        console.error('Error downloading config files:', error);
+        showNotification(`Error: ${error.message}`, 'error');
+    }
+}
+
+function downloadTextFile(filename, content) {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 }
 
 // Initialize WireGuard module

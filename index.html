@@ -134,6 +134,52 @@
                                 </span>
                             </label>
                         </div>
+
+                        <div class="form-group">
+                            <label for="wg-dns-servers">DNS Servers
+                                <span class="tooltip">
+                                    <span class="tooltiptext">DNS servers for clients (comma-separated)</span>
+                                </span>
+                            </label>
+                            <input type="text" id="wg-dns-servers" value="1.1.1.1, 8.8.8.8" placeholder="1.1.1.1, 8.8.8.8">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="wg-allowed-ips">Default Allowed IPs
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Default allowed IPs for clients (0.0.0.0/0 = all traffic)</span>
+                                </span>
+                            </label>
+                            <input type="text" id="wg-allowed-ips" value="0.0.0.0/0" placeholder="0.0.0.0/0">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="wg-routing-table">Routing Table
+                                <span class="tooltip">
+                                    <span class="tooltiptext">RouterOS routing table name (optional)</span>
+                                </span>
+                            </label>
+                            <input type="text" id="wg-routing-table" placeholder="main">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="wg-enable-ipv6">
+                                Enable IPv6 Support
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Generate IPv6 configurations alongside IPv4</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group ipv6-config" style="display: none;">
+                            <label for="wg-ipv6-network">IPv6 Network
+                                <span class="tooltip">
+                                    <span class="tooltiptext">IPv6 network in CIDR notation (e.g., fd00::/64)</span>
+                                </span>
+                            </label>
+                            <input type="text" id="wg-ipv6-network" placeholder="fd00::/64">
+                        </div>
                     </div>
                 </div>
 
@@ -172,6 +218,7 @@
                 <div class="action-buttons">
                     <button class="btn btn-primary" onclick="generateWireGuardConfig()">Generate Configuration</button>
                     <button class="btn btn-secondary" onclick="generateKeys()">Generate New Keys</button>
+                    <button class="btn btn-success" onclick="downloadConfigFiles()">Download Config Files</button>
                 </div>
 
                 <div id="wg-output" class="output-area" style="display: none;">
