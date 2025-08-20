@@ -262,7 +262,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Advanced sections */
-.advanced-options, .key-management, .lte-advanced, .firewall-options, .lte-firewall-options {
+.advanced-options, .key-management, .lte-advanced, .firewall-options, .lte-firewall-options, .naming-section {
     margin-top: 30px;
     padding: 20px;
     background: #f8f9fa;
@@ -270,15 +270,133 @@ input:focus, select:focus, textarea:focus {
     border-left: 4px solid #27ae60;
 }
 
+.naming-section {
+    border-left-color: #f39c12;
+}
+
 .firewall-options, .lte-firewall-options {
     border-left-color: #e74c3c;
 }
 
-.advanced-options h3, .key-management h3, .lte-advanced h3, .firewall-options h3, .lte-firewall-options h3 {
+.advanced-options h3, .key-management h3, .lte-advanced h3, .firewall-options h3, .lte-firewall-options h3, .naming-section h3 {
     margin-bottom: 20px;
     color: #2c3e50;
     border-bottom: 1px solid #ecf0f1;
     padding-bottom: 10px;
+}
+
+/* Configuration sections */
+.config-section {
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.config-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.config-header:hover {
+    background: #e9ecef;
+}
+
+.config-header.active {
+    background: #3498db;
+    color: white;
+}
+
+.config-title {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.config-title input {
+    background: transparent;
+    border: none;
+    font-weight: 600;
+    font-size: 16px;
+    color: inherit;
+    width: 200px;
+}
+
+.config-title input:focus {
+    outline: 1px solid rgba(255,255,255,0.5);
+    border-radius: 3px;
+    padding: 2px 5px;
+}
+
+.config-header.active .config-title input:focus {
+    outline-color: rgba(255,255,255,0.8);
+}
+
+.config-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.toggle-icon {
+    font-size: 18px;
+    transition: transform 0.3s ease;
+}
+
+.toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.config-content {
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.config-content.expanded {
+    max-height: 1000px;
+    padding: 20px;
+}
+
+.config-code {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    margin-bottom: 15px;
+}
+
+.copy-btn {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.copy-btn:hover {
+    background: #229954;
+}
+
+.global-actions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #ecf0f1;
+    text-align: center;
 }
 
 /* Checkbox styling */

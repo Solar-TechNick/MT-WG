@@ -91,12 +91,19 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="wg-client-count">Number of Clients
+                        <label for="wg-client-count">Number of Clients/Sites
                             <span class="tooltip">
-                                <span class="tooltiptext">How many client configurations to generate</span>
+                                <span class="tooltiptext">How many client configurations or sites to generate</span>
                             </span>
                         </label>
-                        <input type="number" id="wg-client-count" value="5" min="1" max="100">
+                        <input type="number" id="wg-client-count" value="5" min="1" max="100" onchange="updateNamingFields()">
+                    </div>
+                </div>
+
+                <div class="naming-section" id="naming-section">
+                    <h3>Configuration Names</h3>
+                    <div id="naming-fields" class="form-grid">
+                        <!-- Dynamic naming fields will be added here -->
                     </div>
 
                     <div class="form-group">
@@ -338,9 +345,13 @@
 
                 <div id="wg-output" class="output-area" style="display: none;">
                     <h3>Generated Configuration</h3>
-                    <div id="wg-config-output" class="code-output"></div>
-                    <button class="btn btn-success" onclick="copyToClipboard(document.getElementById('wg-config-output').textContent)">Copy Configuration</button>
-                    <button class="btn btn-secondary" onclick="downloadQRCodes()">Download QR Codes</button>
+                    <div id="wg-config-sections">
+                        <!-- Dynamic configuration sections will be added here -->
+                    </div>
+                    <div class="global-actions">
+                        <button class="btn btn-success" onclick="copyAllConfigurations()">Copy All</button>
+                        <button class="btn btn-secondary" onclick="downloadQRCodes()">Download QR Codes</button>
+                    </div>
                 </div>
             </div>
 

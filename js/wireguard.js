@@ -56,6 +56,9 @@ class WireGuardConfig {
                 this.updateUIForOutputType(e.target.value);
             });
         });
+
+        // Initialize naming fields
+        this.updateNamingFields();
     }
 
     updateUIForOutputType(outputType) {
@@ -85,6 +88,63 @@ class WireGuardConfig {
                            'Generate MikroTik Scripts';
             generateBtn.textContent = btnText;
         }
+    }
+
+    updateNamingFields() {
+        const count = parseInt(document.getElementById('wg-client-count').value) || 5;
+        const configType = document.querySelector('input[name="wg-type"]:checked').value;
+        const namingFields = document.getElementById('naming-fields');
+        
+        // Clear existing fields
+        namingFields.innerHTML = '';
+
+        // Add server name field for client-server mode
+        if (configType === 'client-server') {
+            const serverField = document.createElement('div');
+            serverField.className = 'form-group';
+            serverField.innerHTML = `
+                <label for="custom-server-name">Server Name</label>
+                <input type="text" id="custom-server-name" value="WG-Server" placeholder="WG-Server">
+            `;
+            namingFields.appendChild(serverField);
+        }
+
+        // Add client/site name fields
+        for (let i = 1; i <= count; i++) {
+            const field = document.createElement('div');
+            field.className = 'form-group';
+            
+            const label = configType === 'site-to-site' ? 'Site' : 'Client';
+            const defaultName = configType === 'site-to-site' ? `Site-${String.fromCharCode(64 + i)}` : `Client-${i}`;
+            
+            field.innerHTML = `
+                <label for="custom-name-${i}">${label} ${i} Name</label>
+                <input type="text" id="custom-name-${i}" value="${defaultName}" placeholder="${defaultName}">
+            `;
+            namingFields.appendChild(field);
+        }
+    }
+
+    getCustomNames() {
+        const count = parseInt(document.getElementById('wg-client-count').value) || 5;
+        const configType = document.querySelector('input[name="wg-type"]:checked').value;
+        const names = {};
+
+        // Get server name for client-server mode
+        if (configType === 'client-server') {
+            const serverNameInput = document.getElementById('custom-server-name');
+            names.server = serverNameInput ? serverNameInput.value || 'WG-Server' : 'WG-Server';
+        }
+
+        // Get client/site names
+        names.clients = [];
+        for (let i = 1; i <= count; i++) {
+            const nameInput = document.getElementById(`custom-name-${i}`);
+            const defaultName = configType === 'site-to-site' ? `Site-${String.fromCharCode(64 + i)}` : `Client-${i}`;
+            names.clients.push(nameInput ? nameInput.value || defaultName : defaultName);
+        }
+
+        return names;
     }
 
     // Generate Curve25519 key pair using WebCrypto API
@@ -239,6 +299,9 @@ class WireGuardConfig {
 
             const clientIPs = generateClientIPs(serverNetwork, clientCount);
 
+            // Get custom names
+            const customNames = this.getCustomNames();
+
             // Generate client configurations
             const clients = [];
             for (let i = 0; i < clientCount; i++) {
@@ -246,7 +309,7 @@ class WireGuardConfig {
                 const presharedKey = this.generatePresharedKey();
                 
                 clients.push({
-                    name: `Client-${i + 1}`,
+                    name: customNames.clients[i] || `Client-${i + 1}`,
                     privateKey: clientKeys.privateKey,
                     publicKey: clientKeys.publicKey,
                     presharedKey: presharedKey,
@@ -258,7 +321,7 @@ class WireGuardConfig {
             // Store configuration
             this.configs = {
                 server: {
-                    name: serverName,
+                    name: customNames.server || serverName,
                     privateKey: serverKeys.privateKey,
                     publicKey: serverKeys.publicKey,
                     network: serverNetwork,
@@ -531,6 +594,73 @@ PersistentKeepalive = ${config.server.keepalive}
 
         return scripts;
     }
+
+    // Generate enhanced collapsible sections
+    generateEnhancedSections(config, outputType) {
+        const sectionsContainer = document.getElementById('wg-config-sections');
+        sectionsContainer.innerHTML = '';
+
+        if (config.type === 'site-to-site') {
+            // Site-to-site only supports MikroTik RouterOS scripts
+            if (outputType === 'wireguard') {
+                showNotification('Site-to-site configurations only support MikroTik RouterOS scripts', 'info');
+                return;
+            }
+
+            const scripts = this.generateSiteToSiteScripts();
+            
+            Object.entries(scripts).forEach(([siteName, script]) => {
+                this.createConfigSection(sectionsContainer, siteName, script, 'mikrotik');
+            });
+
+        } else {
+            // Client-server configuration - handle different output types
+            if (outputType === 'mikrotik' || outputType === 'both') {
+                const serverScript = this.generateServerScript();
+                this.createConfigSection(sectionsContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
+            }
+
+            if (outputType === 'wireguard' || outputType === 'both') {
+                const clientConfigs = this.generateClientConfigs();
+                
+                clientConfigs.forEach(client => {
+                    this.createConfigSection(sectionsContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
+                });
+            }
+        }
+    }
+
+    // Create individual collapsible configuration section
+    createConfigSection(container, initialName, content, type) {
+        const section = document.createElement('div');
+        section.className = 'config-section';
+        
+        const sectionId = 'section-' + Math.random().toString(36).substr(2, 9);
+        const fileExt = type === 'mikrotik' ? '.rsc' : '.conf';
+        
+        section.innerHTML = `
+            <div class="config-header" onclick="toggleSection('${sectionId}')">
+                <div class="config-title">
+                    <input type="text" value="${initialName}" onchange="updateSectionName(this, '${sectionId}')" onclick="event.stopPropagation()">
+                </div>
+                <div class="config-actions">
+                    <button class="copy-btn" onclick="copySection('${sectionId}'); event.stopPropagation()">Copy</button>
+                    <span class="toggle-icon">▼</span>
+                </div>
+            </div>
+            <div class="config-content" id="${sectionId}">
+                <div class="config-code">${content}</div>
+                <button class="copy-btn" onclick="copySection('${sectionId}')">Copy Configuration</button>
+                <button class="btn btn-secondary" onclick="downloadSection('${sectionId}', '${type}')">Download ${fileExt}</button>
+            </div>
+        `;
+        
+        container.appendChild(section);
+        
+        // Store content for copy/download functions
+        section.setAttribute('data-content', content);
+        section.setAttribute('data-type', type);
+    }
 }
 
 // Global functions for HTML onclick handlers
@@ -540,57 +670,10 @@ async function generateWireGuardConfig() {
         
         const config = await window.wireGuardConfig.generateConfiguration();
         const outputType = document.querySelector('input[name="output-type"]:checked').value;
-        let output = '';
-
-        if (config.type === 'site-to-site') {
-            // Site-to-site only supports MikroTik RouterOS scripts
-            if (outputType === 'wireguard') {
-                showNotification('Site-to-site configurations only support MikroTik RouterOS scripts', 'info');
-                return;
-            }
-
-            const scripts = window.wireGuardConfig.generateSiteToSiteScripts();
-            
-            output = '# Site-to-Site WireGuard Configuration\n';
-            output += '# Each site needs its own RouterOS script\n\n';
-
-            Object.entries(scripts).forEach(([siteName, script]) => {
-                output += `# ==========================================\n`;
-                output += `# RouterOS Script for ${siteName}\n`;
-                output += `# ==========================================\n\n`;
-                output += script + '\n\n';
-            });
-
-        } else {
-            // Client-server configuration - handle different output types
-            if (outputType === 'mikrotik' || outputType === 'both') {
-                const serverScript = window.wireGuardConfig.generateServerScript();
-                output += '# MikroTik RouterOS Server Configuration\n';
-                output += '# ==========================================\n\n';
-                output += serverScript + '\n\n';
-            }
-
-            if (outputType === 'wireguard' || outputType === 'both') {
-                const clientConfigs = window.wireGuardConfig.generateClientConfigs();
-                
-                if (outputType === 'both') {
-                    output += '# WireGuard Client Configuration Files\n';
-                    output += '# ==========================================\n';
-                    output += '# Save each client config as a .conf file\n\n';
-                } else {
-                    output = '# WireGuard Client Configuration Files\n';
-                    output += '# Save each client config as a .conf file\n\n';
-                }
-
-                clientConfigs.forEach((client, index) => {
-                    output += `# ${client.name}.conf\n`;
-                    output += client.config + '\n';
-                });
-            }
-        }
-
-        // Display output
-        document.getElementById('wg-config-output').textContent = output;
+        
+        // Generate enhanced sections
+        window.wireGuardConfig.generateEnhancedSections(config, outputType);
+        
         document.getElementById('wg-output').style.display = 'block';
         
         const configTypeText = outputType === 'both' ? 'WireGuard and MikroTik' : 
@@ -723,6 +806,64 @@ function downloadTextFile(filename, content) {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+}
+
+// Global functions for section management
+function updateNamingFields() {
+    if (window.wireGuardConfig) {
+        window.wireGuardConfig.updateNamingFields();
+    }
+}
+
+function toggleSection(sectionId) {
+    const content = document.getElementById(sectionId);
+    const header = content.previousElementSibling;
+    const icon = header.querySelector('.toggle-icon');
+    
+    if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        header.classList.remove('active');
+        icon.classList.remove('expanded');
+    } else {
+        content.classList.add('expanded');
+        header.classList.add('active');
+        icon.classList.add('expanded');
+    }
+}
+
+function copySection(sectionId) {
+    const section = document.getElementById(sectionId).parentElement;
+    const content = section.getAttribute('data-content');
+    
+    copyToClipboard(content);
+}
+
+function downloadSection(sectionId, type) {
+    const section = document.getElementById(sectionId).parentElement;
+    const content = section.getAttribute('data-content');
+    const nameInput = section.querySelector('.config-title input');
+    const name = nameInput.value || 'config';
+    const extension = type === 'mikrotik' ? '.rsc' : '.conf';
+    
+    downloadTextFile(name + extension, content);
+}
+
+function copyAllConfigurations() {
+    const sections = document.querySelectorAll('.config-section');
+    let allContent = '';
+    
+    sections.forEach((section, index) => {
+        const name = section.querySelector('.config-title input').value;
+        const content = section.getAttribute('data-content');
+        
+        if (index > 0) allContent += '\n\n';
+        allContent += `# ==========================================\n`;
+        allContent += `# ${name}\n`;
+        allContent += `# ==========================================\n\n`;
+        allContent += content;
+    });
+    
+    copyToClipboard(allContent);
 }
 
 // Initialize WireGuard module
