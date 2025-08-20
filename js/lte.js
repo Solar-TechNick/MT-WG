@@ -20,6 +20,19 @@ class LTEConfig {
                 this.loadProviderSettings(e.target.value);
             });
         }
+
+        // LTE Firewall toggle
+        const lteFirewallCheckbox = document.getElementById('lte-enable-firewall');
+        if (lteFirewallCheckbox) {
+            lteFirewallCheckbox.addEventListener('change', (e) => {
+                const lteFirewallOptions = document.getElementById('lte-firewall-options');
+                if (e.target.checked) {
+                    lteFirewallOptions.style.display = 'block';
+                } else {
+                    lteFirewallOptions.style.display = 'none';
+                }
+            });
+        }
     }
 
     // Load German LTE providers database
@@ -247,7 +260,13 @@ class LTEConfig {
             profile: document.getElementById('lte-profile').value,
             enableNat: document.getElementById('lte-enable-nat').checked,
             addRoutes: document.getElementById('lte-add-routes').checked,
-            enableFirewall: document.getElementById('lte-enable-firewall').checked
+            enableFirewall: document.getElementById('lte-enable-firewall').checked,
+            firewallSettings: {
+                dropInvalid: document.getElementById('lte-fw-drop-invalid').checked,
+                allowEstablished: document.getElementById('lte-fw-allow-established').checked,
+                protectRouter: document.getElementById('lte-fw-protect-router').checked,
+                logBlocked: document.getElementById('lte-fw-log-blocked').checked
+            }
         };
 
         // Validate required fields
@@ -334,8 +353,52 @@ class LTEConfig {
         }
 
         // Add firewall rules if enabled
-        if (config.enableFirewall) {
-            script += `# Firewall rules for LTE
+        if (config.enableFirewall && config.firewallSettings) {
+            script += `# Advanced firewall rules for LTE
+`;
+            const fw = config.firewallSettings;
+
+            // Drop invalid connections first (if enabled)
+            if (fw.dropInvalid) {
+                script += `/ip/firewall/filter add chain=input action=drop connection-state=invalid comment="Drop invalid connections"
+/ip/firewall/filter add chain=forward action=drop connection-state=invalid comment="Drop invalid forward connections"
+
+`;
+            }
+
+            // Allow established and related connections
+            if (fw.allowEstablished) {
+                script += `/ip/firewall/filter add chain=input action=accept in-interface=${config.interface} connection-state=established,related comment="Allow LTE established/related"
+/ip/firewall/filter add chain=forward action=accept in-interface=${config.interface} connection-state=established,related comment="Allow LTE forward established/related"
+
+`;
+            }
+
+            // Protect router access via LTE
+            if (fw.protectRouter) {
+                script += `/ip/firewall/filter add chain=input action=drop in-interface=${config.interface} dst-port=21,22,23,53,80,443,8080,8291,8728,8729 protocol=tcp comment="Block router access via LTE"
+/ip/firewall/filter add chain=input action=drop in-interface=${config.interface} dst-port=53,161,162,500,4500 protocol=udp comment="Block router services via LTE"
+
+`;
+            }
+
+            // Allow LTE forward out
+            script += `/ip/firewall/filter add chain=forward action=accept out-interface=${config.interface} comment="Allow LTE forward out"
+
+`;
+
+            // Log blocked traffic (if enabled)
+            if (fw.logBlocked) {
+                script += `# Log blocked LTE traffic
+/ip/firewall/filter add chain=input action=log log-prefix="LTE-INPUT-DROP: " in-interface=${config.interface} comment="Log LTE input drops"
+/ip/firewall/filter add chain=forward action=log log-prefix="LTE-FORWARD-DROP: " comment="Log LTE forward drops"
+
+`;
+            }
+
+        } else if (config.enableFirewall) {
+            // Fallback to basic firewall rules
+            script += `# Basic firewall rules for LTE
 /ip/firewall/filter add chain=input action=accept in-interface=${config.interface} connection-state=established,related comment="Allow LTE established"
 /ip/firewall/filter add chain=forward action=accept in-interface=${config.interface} connection-state=established,related comment="Allow LTE forward established"
 /ip/firewall/filter add chain=forward action=accept out-interface=${config.interface} comment="Allow LTE forward out"

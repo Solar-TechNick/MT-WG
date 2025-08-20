@@ -36,6 +36,19 @@ class WireGuardConfig {
                 }
             });
         }
+
+        // Firewall toggle
+        const firewallCheckbox = document.getElementById('wg-enable-firewall');
+        if (firewallCheckbox) {
+            firewallCheckbox.addEventListener('change', (e) => {
+                const firewallOptions = document.getElementById('firewall-options');
+                if (e.target.checked) {
+                    firewallOptions.style.display = 'block';
+                } else {
+                    firewallOptions.style.display = 'none';
+                }
+            });
+        }
     }
 
     // Generate Curve25519 key pair using WebCrypto API
@@ -137,6 +150,18 @@ class WireGuardConfig {
             const ipv6Network = document.getElementById('wg-ipv6-network').value || 'fd00::/64';
             const keyMode = document.querySelector('input[name="key-mode"]:checked').value;
 
+            // Firewall settings
+            const firewallSettings = {
+                allowWireGuardPort: document.getElementById('fw-allow-wireguard-port').checked,
+                allowVpnForward: document.getElementById('fw-allow-vpn-forward').checked,
+                allowInternetAccess: document.getElementById('fw-allow-internet-access').checked,
+                allowLocalNetwork: document.getElementById('fw-allow-local-network').checked,
+                dropInvalid: document.getElementById('fw-drop-invalid').checked,
+                logBlocked: document.getElementById('fw-log-blocked').checked,
+                localNetworks: document.getElementById('fw-local-networks').value,
+                wanInterface: document.getElementById('fw-wan-interface').value || 'WAN'
+            };
+
             // Handle different configuration types
             if (configType === 'site-to-site') {
                 return await this.generateSiteToSiteConfig();
@@ -212,7 +237,8 @@ class WireGuardConfig {
                     allowedIPs: allowedIPs,
                     routingTable: routingTable,
                     enableIPv6: enableIPv6,
-                    ipv6Network: ipv6Network
+                    ipv6Network: ipv6Network,
+                    firewallSettings: firewallSettings
                 },
                 clients: clients,
                 subnet: subnet
@@ -262,9 +288,70 @@ class WireGuardConfig {
         });
 
         // Add firewall rules if enabled
-        if (server.enableFirewall) {
+        if (server.enableFirewall && server.firewallSettings) {
             script += `
 # Firewall rules for WireGuard
+`;
+            const fw = server.firewallSettings;
+
+            // Drop invalid connections first (if enabled)
+            if (fw.dropInvalid) {
+                script += `/ip/firewall/filter add chain=input action=drop connection-state=invalid comment="Drop invalid connections"
+/ip/firewall/filter add chain=forward action=drop connection-state=invalid comment="Drop invalid forward connections"
+
+`;
+            }
+
+            // Allow WireGuard port
+            if (fw.allowWireGuardPort) {
+                const logAction = fw.logBlocked ? ' log=yes log-prefix="WG-ALLOW: "' : '';
+                script += `/ip/firewall/filter add chain=input action=accept protocol=udp dst-port=${server.port}${logAction} comment="Allow WireGuard port ${server.port}"
+
+`;
+            }
+
+            // Allow established and related connections
+            script += `/ip/firewall/filter add chain=input action=accept connection-state=established,related comment="Allow established/related"
+/ip/firewall/filter add chain=forward action=accept connection-state=established,related comment="Allow established/related forward"
+
+`;
+
+            // VPN forwarding rules
+            if (fw.allowVpnForward) {
+                script += `/ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} comment="Allow VPN clients forward"
+`;
+            }
+
+            // Internet access for VPN clients
+            if (fw.allowInternetAccess) {
+                script += `/ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} out-interface-list=${fw.wanInterface} comment="Allow VPN internet access"
+`;
+            }
+
+            // Local network access for VPN clients
+            if (fw.allowLocalNetwork && fw.localNetworks) {
+                const networks = fw.localNetworks.split(',').map(net => net.trim()).filter(net => net);
+                networks.forEach(network => {
+                    script += `/ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} dst-address=${network} comment="Allow VPN access to ${network}"
+`;
+                });
+            }
+
+            // Log blocked traffic (if enabled)
+            if (fw.logBlocked) {
+                script += `
+# Log blocked traffic
+/ip/firewall/filter add chain=input action=log log-prefix="INPUT-DROP: " comment="Log dropped input"
+/ip/firewall/filter add chain=forward action=log log-prefix="FORWARD-DROP: " comment="Log dropped forward"
+`;
+            }
+
+            script += `
+`;
+        } else if (server.enableFirewall) {
+            // Fallback to basic firewall rules
+            script += `
+# Basic firewall rules for WireGuard
 /ip/firewall/filter add chain=input action=accept protocol=udp dst-port=${server.port} comment="Allow WireGuard"
 /ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} comment="Allow WireGuard forward"
 /ip/firewall/filter add chain=forward action=accept out-interface=${server.interface} comment="Allow WireGuard forward out"

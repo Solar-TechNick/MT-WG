@@ -134,7 +134,97 @@
                                 </span>
                             </label>
                         </div>
+                    </div>
+                </div>
 
+                <div class="firewall-options" id="firewall-options" style="display: block;">
+                    <h3>Firewall Configuration</h3>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="fw-allow-wireguard-port" checked>
+                                Allow WireGuard Port
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Allow incoming UDP traffic on WireGuard port</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="fw-allow-vpn-forward" checked>
+                                Allow VPN Forwarding
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Allow traffic forwarding through VPN interface</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="fw-allow-internet-access" checked>
+                                Allow Internet Access
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Allow VPN clients to access internet</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="fw-allow-local-network">
+                                Allow Local Network Access
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Allow VPN clients to access local networks</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="fw-drop-invalid">
+                                Drop Invalid Connections
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Drop invalid connection states for security</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="fw-log-blocked">
+                                Log Blocked Traffic
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Log dropped packets for debugging</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fw-local-networks">Local Networks
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Local networks to allow access to (comma-separated CIDR)</span>
+                                </span>
+                            </label>
+                            <input type="text" id="fw-local-networks" placeholder="192.168.1.0/24, 10.0.1.0/24">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fw-wan-interface">WAN Interface List
+                                <span class="tooltip">
+                                    <span class="tooltiptext">RouterOS interface list name for WAN interfaces</span>
+                                </span>
+                            </label>
+                            <input type="text" id="fw-wan-interface" value="WAN" placeholder="WAN">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="advanced-options">
+                    <h3>Advanced Options</h3>
+                    
+                    <div class="form-grid">
                         <div class="form-group">
                             <label for="wg-dns-servers">DNS Servers
                                 <span class="tooltip">
@@ -355,7 +445,53 @@
                                 <input type="checkbox" id="lte-enable-firewall" checked>
                                 Add Firewall Rules
                                 <span class="tooltip">
-                                    <span class="tooltiptext">Generate basic firewall rules for LTE interface</span>
+                                    <span class="tooltiptext">Generate advanced firewall rules for LTE interface</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lte-firewall-options" id="lte-firewall-options" style="display: block;">
+                    <h3>LTE Firewall Configuration</h3>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="lte-fw-drop-invalid" checked>
+                                Drop Invalid Connections
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Drop invalid connection states for security</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="lte-fw-allow-established" checked>
+                                Allow Established/Related
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Allow established and related connections</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="lte-fw-protect-router">
+                                Protect Router Access
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Block external access to router services via LTE</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="lte-fw-log-blocked">
+                                Log Blocked Traffic
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Log dropped packets for debugging</span>
                                 </span>
                             </label>
                         </div>
