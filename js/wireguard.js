@@ -597,8 +597,14 @@ PersistentKeepalive = ${config.server.keepalive}
 
     // Generate enhanced collapsible sections
     generateEnhancedSections(config, outputType) {
-        const sectionsContainer = document.getElementById('wg-config-sections');
-        sectionsContainer.innerHTML = '';
+        // Clear all output containers
+        const bothContainer = document.getElementById('wg-config-sections');
+        const wgOnlyContainer = document.getElementById('wg-only-sections');
+        const mtOnlyContainer = document.getElementById('mt-only-sections');
+        
+        bothContainer.innerHTML = '';
+        wgOnlyContainer.innerHTML = '';
+        mtOnlyContainer.innerHTML = '';
 
         if (config.type === 'site-to-site') {
             // Site-to-site only supports MikroTik RouterOS scripts
@@ -610,23 +616,34 @@ PersistentKeepalive = ${config.server.keepalive}
             const scripts = this.generateSiteToSiteScripts();
             
             Object.entries(scripts).forEach(([siteName, script]) => {
-                this.createConfigSection(sectionsContainer, siteName, script, 'mikrotik');
+                this.createConfigSection(bothContainer, siteName, script, 'mikrotik');
+                this.createConfigSection(mtOnlyContainer, siteName, script, 'mikrotik');
             });
 
         } else {
             // Client-server configuration - handle different output types
-            if (outputType === 'mikrotik' || outputType === 'both') {
-                const serverScript = this.generateServerScript();
-                this.createConfigSection(sectionsContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
-            }
-
-            if (outputType === 'wireguard' || outputType === 'both') {
-                const clientConfigs = this.generateClientConfigs();
-                
+            const serverScript = this.generateServerScript();
+            const clientConfigs = this.generateClientConfigs();
+            
+            // Populate "All Configurations" tab
+            if (outputType === 'both') {
+                this.createConfigSection(bothContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
                 clientConfigs.forEach(client => {
-                    this.createConfigSection(sectionsContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
+                    this.createConfigSection(bothContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
+                });
+            } else if (outputType === 'mikrotik') {
+                this.createConfigSection(bothContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
+            } else if (outputType === 'wireguard') {
+                clientConfigs.forEach(client => {
+                    this.createConfigSection(bothContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
                 });
             }
+            
+            // Always populate individual tabs for tabbed view
+            this.createConfigSection(mtOnlyContainer, config.server.name + ' (RouterOS)', serverScript, 'mikrotik');
+            clientConfigs.forEach(client => {
+                this.createConfigSection(wgOnlyContainer, client.name + ' (WireGuard)', client.config, 'wireguard');
+            });
         }
     }
 

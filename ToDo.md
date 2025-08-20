@@ -6,6 +6,7 @@ ToDo
 A comprehensive web-based tool for generating WireGuard VPN and LTE mobile configurations optimized for MikroTik RouterOS.
 
 1. ask questions
+2. think harder
 
 Please build a generator for Wirguard configuration
 - configuation for Wireguard
@@ -13,6 +14,7 @@ Please build a generator for Wirguard configuration
 - Working QR-code for mobile import
 - LTE settings (for mikrotik RouterOS) all german    networks
 
+features similar to https://ipv64.net/wireguard-config-generator
 
 ## Features
 

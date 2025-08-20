@@ -37,30 +37,6 @@
                     </label>
                 </div>
 
-                <div class="output-type-selector">
-                    <h3>Configuration Output Type</h3>
-                    <label>
-                        <input type="radio" name="output-type" value="both" checked>
-                        Both WireGuard & MikroTik
-                        <span class="tooltip">
-                            <span class="tooltiptext">Generate both WireGuard .conf files and MikroTik RouterOS scripts</span>
-                        </span>
-                    </label>
-                    <label>
-                        <input type="radio" name="output-type" value="wireguard">
-                        WireGuard Only
-                        <span class="tooltip">
-                            <span class="tooltiptext">Generate only standard WireGuard .conf configuration files</span>
-                        </span>
-                    </label>
-                    <label>
-                        <input type="radio" name="output-type" value="mikrotik">
-                        MikroTik Only
-                        <span class="tooltip">
-                            <span class="tooltiptext">Generate only MikroTik RouterOS scripts (.rsc files)</span>
-                        </span>
-                    </label>
-                </div>
 
                 <div class="form-grid">
                     <div class="form-group">
@@ -343,11 +319,59 @@
                     <button class="btn btn-success" onclick="downloadConfigFiles()">Download Config Files</button>
                 </div>
 
+                <div class="output-type-selector" style="margin-top: 20px;">
+                    <h3>Configuration Output Type</h3>
+                    <label>
+                        <input type="radio" name="output-type" value="both" checked>
+                        Both WireGuard & MikroTik
+                        <span class="tooltip">
+                            <span class="tooltiptext">Generate both WireGuard .conf files and MikroTik RouterOS scripts</span>
+                        </span>
+                    </label>
+                    <label>
+                        <input type="radio" name="output-type" value="wireguard">
+                        WireGuard Only
+                        <span class="tooltip">
+                            <span class="tooltiptext">Generate only standard WireGuard .conf configuration files</span>
+                        </span>
+                    </label>
+                    <label>
+                        <input type="radio" name="output-type" value="mikrotik">
+                        MikroTik Only
+                        <span class="tooltip">
+                            <span class="tooltiptext">Generate only MikroTik RouterOS scripts (.rsc files)</span>
+                        </span>
+                    </label>
+                </div>
+
                 <div id="wg-output" class="output-area" style="display: none;">
-                    <h3>Generated Configuration</h3>
-                    <div id="wg-config-sections">
-                        <!-- Dynamic configuration sections will be added here -->
+                    <div class="output-tabs">
+                        <button class="output-tab-btn active" onclick="showOutputTab('both')">All Configurations</button>
+                        <button class="output-tab-btn" onclick="showOutputTab('wireguard')">WireGuard Configs</button>
+                        <button class="output-tab-btn" onclick="showOutputTab('mikrotik')">MikroTik Scripts</button>
                     </div>
+                    
+                    <div id="output-both" class="output-tab-content active">
+                        <h3>Generated Configuration</h3>
+                        <div id="wg-config-sections">
+                            <!-- Dynamic configuration sections will be added here -->
+                        </div>
+                    </div>
+                    
+                    <div id="output-wireguard" class="output-tab-content">
+                        <h3>WireGuard Configuration Files</h3>
+                        <div id="wg-only-sections">
+                            <!-- WireGuard-only sections will be added here -->
+                        </div>
+                    </div>
+                    
+                    <div id="output-mikrotik" class="output-tab-content">
+                        <h3>MikroTik RouterOS Scripts</h3>
+                        <div id="mt-only-sections">
+                            <!-- MikroTik-only sections will be added here -->
+                        </div>
+                    </div>
+                    
                     <div class="global-actions">
                         <button class="btn btn-success" onclick="copyAllConfigurations()">Copy All</button>
                         <button class="btn btn-secondary" onclick="downloadQRCodes()">Download QR Codes</button>

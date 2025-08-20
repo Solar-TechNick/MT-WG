@@ -162,6 +162,31 @@ function showTab(tabName) {
     }
 }
 
+// Global function for output tabs
+function showOutputTab(tabName) {
+    // Hide all output tab contents
+    document.querySelectorAll('.output-tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Remove active class from all output tab buttons
+    document.querySelectorAll('.output-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Show selected output tab
+    const selectedTab = document.getElementById(`output-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+
+    // Activate corresponding output tab button
+    const activeBtn = document.querySelector(`[onclick="showOutputTab('${tabName}')"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+}
+
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new WireGuardMikroTikApp();
