@@ -4,44 +4,143 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a web-based WireGuard VPN and LTE mobile configuration generator optimized for MikroTik RouterOS. The project generates:
-- WireGuard configurations for client-server and site-to-site setups
-- MikroTik RouterOS scripts for VPN and LTE configurations
-- QR codes for mobile client import
-- Comprehensive German LTE provider configurations
+This is a comprehensive web-based WireGuard VPN and LTE mobile configuration generator optimized for MikroTik RouterOS. The project generates professional-grade configurations with enterprise features and user-friendly interfaces.
 
-## Project Status
+## Current Implementation Status
 
-This project is in planning phase. The current codebase contains only documentation describing the intended features. No implementation exists yet.
+**✅ FULLY IMPLEMENTED** - Complete working application with advanced features deployed at: https://github.com/Solar-TechNick/MT-WG
 
-## Planned Architecture
+## Core Features
 
-Based on the project requirements in ToDo.md, the application will include:
+### WireGuard Configuration Generator
+- **Configuration Types**: Client-server and site-to-site VPN setups
+- **Security**: Secure Curve25519 key generation using WebCrypto API with fallback
+- **Networking**: Automatic IP subnet calculation and allocation
+- **Mobile Support**: QR code generation for mobile client import
+- **Output Options**: Choose between WireGuard configs, MikroTik scripts, or both
+- **Custom Naming**: Editable labels for sites/clients with dynamic naming fields
 
-### WireGuard Configuration Module
-- Client-server and site-to-site VPN configurations
-- Automatic Curve25519 key generation using WebCrypto API
-- IP subnet calculation and allocation
-- QR code generation for mobile clients
-- Individual RouterOS script generation per server/client/site
+### Advanced WireGuard Features
+- **DNS Configuration**: Customizable DNS servers (default: 1.1.1.1, 8.8.8.8)
+- **IPv6 Support**: Dual-stack IPv4/IPv6 configurations
+- **Routing Control**: Custom routing table selection for RouterOS
+- **Allowed IPs**: Configurable traffic routing per client
+- **File Management**: Individual config downloads (.conf and .rsc files)
 
-### LTE Configuration Module
-- German mobile provider database (15+ providers including Telekom, Vodafone, O2)
-- APN profile management with authentication settings
-- RouterOS script generation for SIM PIN, APN profiles, routing, NAT, and firewall
+### Enterprise Firewall Features
+- **Granular Control**: Individual toggles for each firewall feature
+- **Security Hardening**: Invalid connection dropping, traffic logging
+- **Network Access**: Configurable local network access with custom CIDR ranges
+- **Router Protection**: Block external access to router services via LTE
+- **WAN Integration**: Configurable WAN interface lists
 
-### Technical Requirements
-- Web-based responsive UI with navigation between WireGuard and LTE pages
-- Copy-to-clipboard functionality for generated scripts
-- Comprehensive tooltips for non-technical users
-- Error handling and validation
-- Debug tools for troubleshooting
+### LTE Mobile Configuration
+- **Provider Database**: 15+ German mobile providers (Telekom, Vodafone, O2, etc.)
+- **Auto-Configuration**: Provider selection auto-fills APN settings
+- **Authentication**: Visual indicators for required/optional authentication
+- **Complete Scripts**: RouterOS scripts with SIM PIN, APN, routing, NAT, firewall
 
-## Development Notes
+### Enhanced User Experience
+- **Collapsible Sections**: Individual configuration sections (collapsed by default)
+- **Individual Copy**: Per-section copy buttons for easy deployment
+- **Editable Names**: Click-to-edit labels for sites and clients in section headers
+- **Professional UI**: Responsive design with comprehensive tooltips
+- **Smart Validation**: Real-time input validation with helpful error messages
 
-When implementing this project:
-- All RouterOS commands must be validated against official MikroTik documentation
-- Use WebCrypto API for secure key generation
-- Implement proper subnet calculation for automatic IP allocation
-- Include comprehensive German LTE provider database with accurate APN settings
-- Ensure generated scripts include complete configuration (NAT, firewall, routing)
+## File Structure
+
+```
+/
+├── index.html              # Main application with tab navigation
+├── styles.css              # Responsive CSS with modern styling
+├── js/
+│   ├── app.js              # Main application controller with validation
+│   ├── wireguard.js        # WireGuard configuration logic and sections
+│   ├── lte.js              # LTE provider database and generation
+│   ├── qrcode.js           # QR code generation module
+│   └── utils.js            # Utility functions and validation
+├── CLAUDE.md               # This file
+├── README.md               # User documentation
+├── INSTALL.md              # Installation and usage guide
+└── ToDo.md                 # Original project requirements
+```
+
+## Technical Architecture
+
+### Key Generation (`js/wireguard.js:150-215`)
+- Primary: X25519 key generation via WebCrypto API
+- Fallback: crypto.getRandomValues with proper Curve25519 clamping
+- Validation: Base64 key format validation
+
+### Configuration Generation (`js/wireguard.js:216-337`)
+- Dynamic client/site counting with custom naming
+- Comprehensive input validation (IP, CIDR, endpoints)
+- Support for both output types (WireGuard/MikroTik/Both)
+
+### Enhanced Sections (`js/wireguard.js:598-663`)
+- Dynamic collapsible sections with smooth animations
+- Individual content storage in data attributes
+- Type-aware file downloads (.rsc vs .conf)
+- Editable section names with real-time updates
+
+### Provider Database (`js/lte.js:39-163`)
+- Comprehensive German LTE provider data
+- Authentication status indicators
+- Automatic profile name generation
+
+### Firewall Management (`js/wireguard.js:389-493`)
+- Granular firewall rule generation
+- Security-first approach with comprehensive options
+- RouterOS-specific rule ordering and syntax
+
+## Development Guidelines
+
+### Code Conventions
+- Use modern ES6+ features and WebCrypto API
+- Follow existing naming patterns for consistency
+- Maintain responsive design principles
+- Include comprehensive tooltips for user guidance
+
+### Feature Implementation
+- All RouterOS commands validated against official MikroTik documentation
+- Implement proper error handling with user-friendly messages
+- Use branch-based development with descriptive commit messages
+- Test firewall rules for security best practices
+
+### Security Considerations
+- Client-side key generation only (no server transmission)
+- Secure random number generation for all cryptographic operations
+- Input validation for all user-provided data
+- No sensitive information in generated logs
+
+## Current Branch Structure
+
+- **main**: Stable release version
+- **feature/enhanced-wireguard-features**: DNS, IPv6, routing enhancements
+- **feature/enhanced-firewall-rules**: Comprehensive MikroTik firewall options
+- **feature/config-output-selector**: Output type selection (WG/MT/Both)
+- **feature/enhanced-config-sections**: Individual copy-paste sections
+
+## Key Functions Reference
+
+### Dynamic Naming (`js/wireguard.js:93-148`)
+- `updateNamingFields()`: Creates dynamic naming inputs based on count
+- `getCustomNames()`: Retrieves user-defined names for configurations
+
+### Section Management (`js/wireguard.js:811-867`)
+- `toggleSection(sectionId)`: Handles collapsible section interactions
+- `copySection(sectionId)`: Individual section clipboard functionality
+- `downloadSection(sectionId, type)`: Per-section file downloads
+
+### Validation (`js/utils.js:35-95`)
+- `isValidIP(ip)`: IP address validation
+- `isValidCIDR(cidr)`: CIDR notation validation
+- `calculateSubnet(network, clientCount)`: Subnet calculation
+
+## Deployment Notes
+
+- **Static files only** - no server requirements
+- **Modern browser** with WebCrypto API support required
+- **All processing client-side** for maximum security
+- **Mobile-responsive** design for tablet/phone usage
+- **Professional grade** suitable for enterprise deployment
