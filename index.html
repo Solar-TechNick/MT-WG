@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WireGuard MikroTik Configurator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>WireGuard MikroTik Configurator</h1>
+            <nav>
+                <button class="nav-btn active" onclick="showTab('wireguard')">WireGuard VPN</button>
+                <button class="nav-btn" onclick="showTab('lte')">LTE Mobile</button>
+            </nav>
+        </header>
+
+        <main>
+            <div id="wireguard-tab" class="tab-content active">
+                <h2>WireGuard VPN Configuration</h2>
+                
+                <div class="config-type-selector">
+                    <label>
+                        <input type="radio" name="wg-type" value="client-server" checked>
+                        Client-Server VPN
+                        <span class="tooltip">
+                            <span class="tooltiptext">Traditional VPN setup with a central server and multiple clients</span>
+                        </span>
+                    </label>
+                    <label>
+                        <input type="radio" name="wg-type" value="site-to-site">
+                        Site-to-Site VPN
+                        <span class="tooltip">
+                            <span class="tooltiptext">Connect multiple locations with mesh topology</span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="wg-server-name">Server Name
+                            <span class="tooltip">
+                                <span class="tooltiptext">Friendly name for the VPN server</span>
+                            </span>
+                        </label>
+                        <input type="text" id="wg-server-name" value="WG-Server" placeholder="WG-Server">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wg-server-port">Server Port
+                            <span class="tooltip">
+                                <span class="tooltiptext">UDP port for WireGuard server (default: 51820)</span>
+                            </span>
+                        </label>
+                        <input type="number" id="wg-server-port" value="51820" min="1" max="65535">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wg-server-ip">Server IP/Network
+                            <span class="tooltip">
+                                <span class="tooltiptext">VPN network in CIDR notation (e.g., 10.0.0.1/24)</span>
+                            </span>
+                        </label>
+                        <input type="text" id="wg-server-ip" value="10.0.0.1/24" placeholder="10.0.0.1/24">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wg-client-count">Number of Clients
+                            <span class="tooltip">
+                                <span class="tooltiptext">How many client configurations to generate</span>
+                            </span>
+                        </label>
+                        <input type="number" id="wg-client-count" value="5" min="1" max="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wg-server-endpoint">Server Endpoint
+                            <span class="tooltip">
+                                <span class="tooltiptext">Public IP or domain name of the server</span>
+                            </span>
+                        </label>
+                        <input type="text" id="wg-server-endpoint" placeholder="your-server.com or 1.2.3.4">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wg-interface-name">Interface Name
+                            <span class="tooltip">
+                                <span class="tooltiptext">WireGuard interface name in RouterOS</span>
+                            </span>
+                        </label>
+                        <input type="text" id="wg-interface-name" value="wireguard1" placeholder="wireguard1">
+                    </div>
+                </div>
+
+                <div class="advanced-options">
+                    <h3>Advanced Options</h3>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="wg-mtu">MTU Size
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Maximum Transmission Unit (usually 1420 for WireGuard)</span>
+                                </span>
+                            </label>
+                            <input type="number" id="wg-mtu" value="1420" min="1280" max="1500">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="wg-keepalive">Persistent Keepalive
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Send keepalive packets every X seconds (0 = disabled)</span>
+                                </span>
+                            </label>
+                            <input type="number" id="wg-keepalive" value="25" min="0" max="300">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="wg-enable-nat" checked>
+                                Enable NAT/Masquerading
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Allow clients to access internet through server</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="wg-enable-firewall" checked>
+                                Add Firewall Rules
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Generate RouterOS firewall rules for WireGuard</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="key-management">
+                    <h3>Key Management</h3>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="key-mode" value="auto" checked>
+                            Auto-generate keys
+                            <span class="tooltip">
+                                <span class="tooltiptext">Automatically generate secure Curve25519 key pairs</span>
+                            </span>
+                        </label>
+                        <label>
+                            <input type="radio" name="key-mode" value="manual">
+                            Manual key entry
+                            <span class="tooltip">
+                                <span class="tooltiptext">Enter your own private/public keys</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div id="manual-keys" class="manual-keys" style="display: none;">
+                        <div class="form-group">
+                            <label for="wg-server-private">Server Private Key</label>
+                            <input type="text" id="wg-server-private" placeholder="Base64 encoded private key">
+                        </div>
+                        <div class="form-group">
+                            <label for="wg-server-public">Server Public Key</label>
+                            <input type="text" id="wg-server-public" placeholder="Base64 encoded public key">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="generateWireGuardConfig()">Generate Configuration</button>
+                    <button class="btn btn-secondary" onclick="generateKeys()">Generate New Keys</button>
+                </div>
+
+                <div id="wg-output" class="output-area" style="display: none;">
+                    <h3>Generated Configuration</h3>
+                    <div id="wg-config-output" class="code-output"></div>
+                    <button class="btn btn-success" onclick="copyToClipboard(document.getElementById('wg-config-output').textContent)">Copy Configuration</button>
+                    <button class="btn btn-secondary" onclick="downloadQRCodes()">Download QR Codes</button>
+                </div>
+            </div>
+
+            <div id="lte-tab" class="tab-content">
+                <h2>LTE Mobile Configuration</h2>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="lte-provider">Provider
+                            <span class="tooltip">
+                                <span class="tooltiptext">Select your German mobile network provider</span>
+                            </span>
+                        </label>
+                        <select id="lte-provider" onchange="loadProviderSettings()">
+                            <option value="">Select Provider...</option>
+                            <option value="telekom">Deutsche Telekom</option>
+                            <option value="telekom-alt">Deutsche Telekom (Alternative)</option>
+                            <option value="telekom-ipv6">Deutsche Telekom (IPv6)</option>
+                            <option value="vodafone">Vodafone</option>
+                            <option value="vodafone-gigacube">Vodafone GigaCube</option>
+                            <option value="o2-contract">O2 Contract</option>
+                            <option value="o2-prepaid">O2 Prepaid</option>
+                            <option value="1und1">1&1 (Vodafone Network)</option>
+                            <option value="aldi">ALDI TALK</option>
+                            <option value="congstar">congstar</option>
+                            <option value="otelo">otelo</option>
+                            <option value="mobilcom">mobilcom-debitel</option>
+                            <option value="klarmobil">klarmobil</option>
+                            <option value="drillisch">Drillisch</option>
+                            <option value="freenet">freenet</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lte-apn">APN
+                            <span class="tooltip">
+                                <span class="tooltiptext">Access Point Name - automatically filled when selecting provider</span>
+                            </span>
+                        </label>
+                        <input type="text" id="lte-apn" placeholder="internet.provider.de">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lte-username">Username
+                            <span class="tooltip">
+                                <span class="tooltiptext">APN username (leave empty if not required)</span>
+                            </span>
+                        </label>
+                        <input type="text" id="lte-username" placeholder="Optional">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lte-password">Password
+                            <span class="tooltip">
+                                <span class="tooltiptext">APN password (leave empty if not required)</span>
+                            </span>
+                        </label>
+                        <input type="password" id="lte-password" placeholder="Optional">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lte-auth">Authentication
+                            <span class="tooltip">
+                                <span class="tooltiptext">Authentication protocol (PAP or CHAP)</span>
+                            </span>
+                        </label>
+                        <select id="lte-auth">
+                            <option value="pap">PAP</option>
+                            <option value="chap">CHAP</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lte-sim-pin">SIM PIN
+                            <span class="tooltip">
+                                <span class="tooltiptext">Your SIM card PIN (optional but recommended)</span>
+                            </span>
+                        </label>
+                        <input type="password" id="lte-sim-pin" placeholder="1234">
+                    </div>
+                </div>
+
+                <div class="lte-advanced">
+                    <h3>Interface Configuration</h3>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="lte-interface">LTE Interface
+                                <span class="tooltip">
+                                    <span class="tooltiptext">RouterOS LTE interface name</span>
+                                </span>
+                            </label>
+                            <input type="text" id="lte-interface" value="lte1" placeholder="lte1">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lte-profile">Profile Name
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Name for the APN profile in RouterOS</span>
+                                </span>
+                            </label>
+                            <input type="text" id="lte-profile" placeholder="Will be auto-generated">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="lte-enable-nat" checked>
+                                Enable NAT
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Enable Network Address Translation for internet access</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="lte-add-routes" checked>
+                                Add Default Routes
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Add routing rules for internet traffic</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="lte-enable-firewall" checked>
+                                Add Firewall Rules
+                                <span class="tooltip">
+                                    <span class="tooltiptext">Generate basic firewall rules for LTE interface</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="generateLTEConfig()">Generate LTE Configuration</button>
+                    <button class="btn btn-secondary" onclick="testAPNSettings()">Test APN Settings</button>
+                </div>
+
+                <div id="lte-output" class="output-area" style="display: none;">
+                    <h3>Generated RouterOS Script</h3>
+                    <div id="lte-config-output" class="code-output"></div>
+                    <button class="btn btn-success" onclick="copyToClipboard(document.getElementById('lte-config-output').textContent)">Copy Script</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/wireguard.js"></script>
+    <script src="js/lte.js"></script>
+    <script src="js/qrcode.js"></script>
+    <script src="js/utils.js"></script>
+</body>
+</html>
