@@ -12,6 +12,19 @@ class WireGuardConfig {
     }
 
     setupEventListeners() {
+        // Configuration type toggle (Client-Server vs Site-to-Site)
+        document.querySelectorAll('input[name="wg-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const siteToSiteConfig = document.getElementById('site-to-site-config');
+                if (e.target.value === 'site-to-site') {
+                    siteToSiteConfig.style.display = 'block';
+                } else {
+                    siteToSiteConfig.style.display = 'none';
+                }
+                this.updateNamingFields();
+            });
+        });
+
         // Key mode toggle
         document.querySelectorAll('input[name="key-mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
@@ -544,40 +557,69 @@ PersistentKeepalive = ${config.server.keepalive}
     // Generate site-to-site configuration
     async generateSiteToSiteConfig() {
         const siteCount = parseInt(document.getElementById('wg-client-count').value) || 3;
-        const baseNetwork = document.getElementById('wg-server-ip').value || '10.0.0.0/24';
+        const transferSubnet = document.getElementById('wg-transfer-subnet')?.value || '10.2.2.0/24';
+        const localNetwork = document.getElementById('wg-local-network')?.value || '192.168.1.0/24';
+        const globalPSK = document.getElementById('wg-global-psk')?.value || '';
         const interfaceName = document.getElementById('wg-interface-name').value || 'wireguard1';
         const port = document.getElementById('wg-server-port').value || '51820';
         const mtu = document.getElementById('wg-mtu').value || '1420';
         const keepalive = document.getElementById('wg-keepalive').value || '25';
+        const dnsServers = document.getElementById('wg-dns-servers').value || '1.1.1.1, 8.8.8.8';
+        
+        // Advanced options
+        const enablePSK = document.getElementById('wg-enable-psk')?.checked !== false;
+        const noRoutingTable = document.getElementById('wg-no-routing-table')?.checked || false;
+        const enableNAT = document.getElementById('wg-enable-nat')?.checked !== false;
+        const generateFirewall = document.getElementById('wg-generate-firewall')?.checked !== false;
 
         // Generate site configurations
         const sites = [];
         for (let i = 0; i < siteCount; i++) {
             const siteKeys = await this.generateKeyPair();
             const siteNetwork = `10.${i + 1}.0.0/24`; // Each site gets its own subnet
-            const vpnIP = `10.0.0.${i + 1}/32`;
+            const vpnIP = this.calculateSiteIP(transferSubnet, i);
+
+            // Generate PSK if enabled
+            const presharedKey = enablePSK ? (globalPSK || this.generatePresharedKey()) : '';
 
             sites.push({
                 name: `Site-${i + 1}`,
                 privateKey: siteKeys.privateKey,
                 publicKey: siteKeys.publicKey,
                 network: siteNetwork,
+                localNetwork: localNetwork,
                 vpnIP: vpnIP,
                 port: parseInt(port) + i,
-                endpoint: `site${i + 1}.example.com` // Placeholder
+                endpoint: `site${i + 1}.example.com`, // Placeholder
+                presharedKey: presharedKey
             });
         }
 
         this.configs = {
             type: 'site-to-site',
             sites: sites,
-            baseNetwork: baseNetwork,
+            transferSubnet: transferSubnet,
+            localNetwork: localNetwork,
             interface: interfaceName,
             mtu: mtu,
-            keepalive: keepalive
+            keepalive: keepalive,
+            dnsServers: dnsServers,
+            enablePSK: enablePSK,
+            noRoutingTable: noRoutingTable,
+            enableNAT: enableNAT,
+            generateFirewall: generateFirewall,
+            globalPSK: globalPSK
         };
 
         return this.configs;
+    }
+
+    // Calculate site IP from transfer subnet
+    calculateSiteIP(transferSubnet, siteIndex) {
+        const [network, cidr] = transferSubnet.split('/');
+        const parts = network.split('.');
+        const baseIP = `${parts[0]}.${parts[1]}.${parts[2]}.${parseInt(parts[3]) + siteIndex + 1}`;
+        return `${baseIP}/32`;
     }
 
     // Generate site-to-site RouterOS scripts
@@ -612,22 +654,45 @@ PersistentKeepalive = ${config.server.keepalive}
 `;
             config.sites.forEach((peer, peerIndex) => {
                 if (peerIndex !== index) {
-                    const presharedKey = this.generatePresharedKey();
-                    script += `/interface/wireguard/peers add interface=${config.interface} public-key="${peer.publicKey}" preshared-key="${presharedKey}" allowed-address=${peer.network},${peer.vpnIP.split('/')[0]}/32 endpoint-address=${peer.endpoint} endpoint-port=${peer.port} persistent-keepalive=${config.keepalive} comment="${peer.name}"
+                    const presharedKey = config.enablePSK ? (peer.presharedKey || this.generatePresharedKey()) : '';
+                    const pskParam = presharedKey ? ` preshared-key="${presharedKey}"` : '';
+                    const allowedIPs = config.noRoutingTable ? peer.vpnIP.split('/')[0] + '/32' : `${peer.network},${peer.vpnIP.split('/')[0]}/32`;
+                    
+                    script += `/interface/wireguard/peers add interface=${config.interface} public-key="${peer.publicKey}"${pskParam} allowed-address=${allowedIPs} endpoint-address=${peer.endpoint} endpoint-port=${peer.port} persistent-keepalive=${config.keepalive} comment="${peer.name}"
 `;
                 }
             });
 
-            // Add routing
-            script += `
+            // Add routing (if not disabled)
+            if (!config.noRoutingTable) {
+                script += `
 # Add routes to peer networks
 `;
-            config.sites.forEach((peer, peerIndex) => {
-                if (peerIndex !== index) {
-                    script += `/ip/route add dst-address=${peer.network} gateway=${config.interface} comment="Route to ${peer.name}"
+                config.sites.forEach((peer, peerIndex) => {
+                    if (peerIndex !== index) {
+                        script += `/ip/route add dst-address=${peer.network} gateway=${config.interface} comment="Route to ${peer.name}"
 `;
-                }
-            });
+                    }
+                });
+            }
+
+            // Add NAT/Masquerade (if enabled)
+            if (config.enableNAT) {
+                script += `
+# Enable NAT/Masquerade for local network
+/ip/firewall/nat add chain=srcnat src-address=${config.localNetwork} out-interface-list=WAN action=masquerade comment="NAT for local network"
+`;
+            }
+
+            // Add firewall rules (if enabled)
+            if (config.generateFirewall) {
+                script += `
+# Firewall rules for WireGuard
+/ip/firewall/filter add chain=input protocol=udp dst-port=${site.port} action=accept comment="Allow WireGuard"
+/ip/firewall/filter add chain=forward in-interface=${config.interface} action=accept comment="Allow WireGuard forwarding"
+/ip/firewall/filter add chain=forward out-interface=${config.interface} action=accept comment="Allow WireGuard forwarding"
+`;
+            }
 
             scripts[site.name] = script;
         });
