@@ -11,7 +11,10 @@
       "Bash(git checkout:*)",
       "Bash(git commit:*)",
       "WebFetch(domain:www.wireguard.com)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## RULES !!!!
+Don't asume!! AÖWAYS ASK QESTIONS!!!
+
 ## Project Overview
 
 This is a comprehensive web-based WireGuard VPN and LTE mobile configuration generator optimized for MikroTik RouterOS. The project generates professional-grade configurations with enterprise features and user-friendly interfaces.

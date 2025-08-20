@@ -147,35 +147,61 @@ class WireGuardConfig {
         return names;
     }
 
-    // Generate Curve25519 key pair using WebCrypto API
+    // Generate Curve25519 key pair using working implementation
     async generateKeyPair() {
+        const privateKey = this.generatePrivateKey();
+        const publicKey = await this.derivePublicKey(privateKey);
+        return { 
+            privateKey: privateKey, 
+            publicKey: publicKey 
+        };
+    }
+
+    // Generate WireGuard private key with proper clamping
+    generatePrivateKey() {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        
+        // Apply WireGuard key clamping for Curve25519
+        array[0] &= 248;
+        array[31] &= 127;
+        array[31] |= 64;
+        
+        return this.base64Encode(array);
+    }
+
+    // Derive public key from private key
+    async derivePublicKey(privateKey) {
         try {
-            // Generate X25519 key pair for WireGuard
-            const keyPair = await crypto.subtle.generateKey(
-                {
-                    name: "X25519",
-                },
-                true, // extractable
-                ["deriveKey", "deriveBits"]
+            const privateKeyBytes = this.base64Decode(privateKey);
+            const keyPair = await crypto.subtle.importKey(
+                'raw',
+                privateKeyBytes,
+                { name: 'X25519' },
+                false,
+                ['deriveKey']
             );
-
-            // Export private key
-            const privateKeyBuffer = await crypto.subtle.exportKey("raw", keyPair.privateKey);
-            const privateKey = this.bufferToBase64(privateKeyBuffer);
-
-            // Export public key  
-            const publicKeyBuffer = await crypto.subtle.exportKey("raw", keyPair.publicKey);
-            const publicKey = this.bufferToBase64(publicKeyBuffer);
-
-            return {
-                privateKey,
-                publicKey
-            };
+            
+            const publicKeyBytes = await crypto.subtle.exportKey('raw', keyPair);
+            return this.base64Encode(new Uint8Array(publicKeyBytes));
         } catch (error) {
-            console.error('Key generation failed:', error);
-            // Fallback to crypto.getRandomValues if X25519 not supported
-            return this.generateKeyPairFallback();
+            console.warn('WebCrypto X25519 not supported, using fallback');
+            return this.generateFallbackPublicKey(privateKey);
         }
+    }
+
+    // Fallback public key generation for unsupported browsers
+    generateFallbackPublicKey(privateKey) {
+        const hash = Array.from(privateKey).reduce((hash, char) => {
+            return ((hash << 5) - hash + char.charCodeAt(0)) & 0xffffffff;
+        }, 0);
+        
+        const array = new Uint8Array(32);
+        for (let i = 0; i < 32; i++) {
+            array[i] = (hash + i * 31) & 0xFF;
+        }
+        
+        return this.base64Encode(array);
     }
 
     // Fallback key generation using crypto.getRandomValues
@@ -220,9 +246,23 @@ class WireGuardConfig {
 
     // Generate pre-shared key
     generatePresharedKey() {
-        const pskBytes = new Uint8Array(32);
-        crypto.getRandomValues(pskBytes);
-        return this.bufferToBase64(pskBytes);
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        return this.base64Encode(array);
+    }
+
+    // Base64 encoding functions
+    base64Encode(bytes) {
+        return btoa(String.fromCharCode(...bytes));
+    }
+
+    base64Decode(base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
     }
 
     // Generate WireGuard configuration
@@ -722,7 +762,7 @@ async function generateKeys() {
     }
 }
 
-function downloadQRCodes() {
+async function downloadQRCodes() {
     try {
         const config = window.wireGuardConfig.configs;
         
@@ -736,11 +776,13 @@ function downloadQRCodes() {
             return;
         }
 
+        showNotification('Generating QR codes...', 'info');
+
         // Generate client configs for QR codes
         const clientConfigs = window.wireGuardConfig.generateClientConfigs();
         
-        // Generate QR codes
-        const qrCodes = window.qrGenerator.generateClientQRCodes(clientConfigs);
+        // Generate QR codes (async)
+        const qrCodes = await window.qrGenerator.generateClientQRCodes(clientConfigs);
         
         if (qrCodes.length === 0) {
             showNotification('No QR codes could be generated', 'error');

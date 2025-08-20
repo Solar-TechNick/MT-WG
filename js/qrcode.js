@@ -8,25 +8,41 @@ class QRCodeGenerator {
         console.log('QR Code generator initialized');
     }
 
-    // Generate QR code using a simple QR code library implementation
-    // This is a lightweight implementation without external dependencies
-    generateQRCode(text, size = 200) {
+    // Generate QR code using fallback implementation
+    async generateQRCode(text, size = 200) {
         try {
             // Create canvas element
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
             
-            canvas.width = size;
-            canvas.height = size;
-
-            // Simple QR code placeholder - in production would use proper QR library
-            // For now, we'll create a data URL with the configuration text
-            const qrDataUrl = this.createQRDataURL(text, size);
+            // Try to use external QRCode library first, fallback to SimpleQRCode
+            if (typeof QRCode !== 'undefined') {
+                await QRCode.toCanvas(canvas, text, {
+                    width: size,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                });
+            } else if (typeof window.SimpleQRCode !== 'undefined') {
+                await window.SimpleQRCode.toCanvas(canvas, text, {
+                    width: size,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                });
+            } else {
+                // Last resort: use the simple placeholder
+                return this.createQRDataURL(text, size);
+            }
             
-            return qrDataUrl;
+            return canvas.toDataURL('image/png');
         } catch (error) {
             console.error('QR code generation failed:', error);
-            throw new Error('Failed to generate QR code');
+            // Fallback to simple implementation
+            return this.createQRDataURL(text, size);
         }
     }
 
@@ -104,12 +120,12 @@ class QRCodeGenerator {
     }
 
     // Generate QR codes for all client configurations
-    generateClientQRCodes(clientConfigs) {
+    async generateClientQRCodes(clientConfigs) {
         const qrCodes = [];
 
-        clientConfigs.forEach((client, index) => {
+        for (const client of clientConfigs) {
             try {
-                const qrDataUrl = this.generateQRCode(client.config, 300);
+                const qrDataUrl = await this.generateQRCode(client.config, 300);
                 qrCodes.push({
                     name: client.name,
                     config: client.config,
@@ -118,7 +134,7 @@ class QRCodeGenerator {
             } catch (error) {
                 console.error(`Failed to generate QR code for ${client.name}:`, error);
             }
-        });
+        }
 
         return qrCodes;
     }

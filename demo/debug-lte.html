@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTE Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: #0056b3; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>LTE Button Debug Tool</h1>
+    
+    <div class="debug-section">
+        <h2>Actions</h2>
+        <button class="btn" onclick="checkElements()">Check Elements</button>
+        <button class="btn" onclick="switchToLte()">Switch to LTE Page</button>
+        <button class="btn" onclick="testLteButton()">Test LTE Button</button>
+        <button class="btn" onclick="clearLog()">Clear Log</button>
+        <button class="btn" onclick="openMainApp()">Open Main App</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Log Output</h2>
+        <div id="logOutput" class="log"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Element Status</h2>
+        <div id="elementStatus"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            logOutput.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function checkElements() {
+            log('=== Checking Elements ===');
+            
+            const elementIds = [
+                'mobileProvider', 'apnName', 'apnUsername', 'apnPassword', 'simPin',
+                'lteInterface', 'apnProfileName', 'authMethod', 'ipType', 
+                'enableLteNat', 'enableLteFirewall', 'setDefaultRoute', 
+                'routeDistance', 'localLanNetwork', 'enableMultipleApn',
+                'generateLteConfig', 'lteScriptOutput', 'lteOutputSection'
+            ];
+            
+            let found = 0;
+            let missing = 0;
+            
+            elementIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    log(`✓ ${id}: Found`, 'success');
+                    found++;
+                } else {
+                    log(`✗ ${id}: Missing`, 'error');
+                    missing++;
+                }
+            });
+            
+            log(`Summary: ${found} found, ${missing} missing`);
+            
+            // Check pages
+            const pages = ['wireguard-page', 'lte-page'];
+            pages.forEach(pageId => {
+                const page = document.getElementById(pageId);
+                if (page) {
+                    const isActive = page.classList.contains('active');
+                    log(`Page ${pageId}: ${isActive ? 'Active' : 'Inactive'}`, isActive ? 'success' : 'warning');
+                } else {
+                    log(`Page ${pageId}: Not found`, 'error');
+                }
+            });
+            
+            // Check if configurator exists
+            if (window.configurator) {
+                log('✓ window.configurator exists', 'success');
+                
+                // Check configurator elements
+                if (window.configurator.elements) {
+                    const configElements = window.configurator.elements;
+                    const hasLteElements = configElements.generateLteConfig && configElements.mobileProvider;
+                    log(`Configurator has LTE elements: ${hasLteElements ? 'Yes' : 'No'}`, hasLteElements ? 'success' : 'error');
+                } else {
+                    log('✗ configurator.elements not found', 'error');
+                }
+            } else {
+                log('✗ window.configurator not found', 'error');
+            }
+            
+            updateElementStatus();
+        }
+
+        function updateElementStatus() {
+            const statusDiv = document.getElementById('elementStatus');
+            let html = '<h3>Current Element Status</h3>';
+            
+            const criticalElements = ['generateLteConfig', 'mobileProvider', 'apnName'];
+            
+            criticalElements.forEach(id => {
+                const element = document.getElementById(id);
+                const status = element ? 'Found' : 'Missing';
+                const color = element ? 'green' : 'red';
+                html += `<div style="color: ${color}; margin: 5px 0;"><strong>${id}:</strong> ${status}</div>`;
+                
+                if (element) {
+                    html += `<div style="margin-left: 20px; font-size: 12px; color: #666;">`;
+                    html += `Type: ${element.type || element.tagName}, `;
+                    html += `Visible: ${element.offsetParent !== null ? 'Yes' : 'No'}, `;
+                    html += `Parent: ${element.parentElement ? element.parentElement.tagName : 'None'}`;
+                    html += `</div>`;
+                }
+            });
+            
+            statusDiv.innerHTML = html;
+        }
+
+        function switchToLte() {
+            log('Attempting to switch to LTE page...');
+            
+            if (window.configurator && window.configurator.switchPage) {
+                try {
+                    window.configurator.switchPage('lte');
+                    log('✓ Switched to LTE page using configurator.switchPage()', 'success');
+                } catch (error) {
+                    log(`✗ Error switching page: ${error.message}`, 'error');
+                }
+            } else {
+                log('configurator.switchPage not available, trying manual switch', 'warning');
+                
+                // Manual switch
+                const lteButton = document.querySelector('[data-page="lte"]');
+                if (lteButton) {
+                    lteButton.click();
+                    log('✓ Clicked LTE navigation button', 'success');
+                } else {
+                    log('✗ LTE navigation button not found', 'error');
+                }
+            }
+            
+            // Check if switch was successful
+            setTimeout(() => {
+                const ltePage = document.getElementById('lte-page');
+                if (ltePage && ltePage.classList.contains('active')) {
+                    log('✓ LTE page is now active', 'success');
+                    checkElements();
+                } else {
+                    log('✗ LTE page is not active', 'error');
+                }
+            }, 100);
+        }
+
+        function testLteButton() {
+            log('Testing LTE button functionality...');
+            
+            const button = document.getElementById('generateLteConfig');
+            if (!button) {
+                log('✗ LTE button not found in DOM', 'error');
+                return;
+            }
+            
+            log('✓ LTE button found in DOM', 'success');
+            
+            // Check if button is visible
+            if (button.offsetParent === null) {
+                log('⚠ LTE button is not visible (might be on hidden page)', 'warning');
+            } else {
+                log('✓ LTE button is visible', 'success');
+            }
+            
+            // Try to click the button
+            try {
+                log('Clicking LTE button...');
+                button.click();
+                log('✓ Button clicked successfully', 'success');
+            } catch (error) {
+                log(`✗ Error clicking button: ${error.message}`, 'error');
+            }
+            
+            // Check if configurator method exists
+            if (window.configurator && window.configurator.generateLteConfiguration) {
+                log('✓ configurator.generateLteConfiguration method exists', 'success');
+                
+                // Try calling the method directly
+                try {
+                    log('Calling generateLteConfiguration directly...');
+                    window.configurator.generateLteConfiguration();
+                    log('✓ Method called successfully', 'success');
+                } catch (error) {
+                    log(`✗ Error calling method: ${error.message}`, 'error');
+                }
+            } else {
+                log('✗ configurator.generateLteConfiguration method not found', 'error');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('logOutput').innerHTML = '';
+        }
+
+        function openMainApp() {
+            window.open('index.html', '_blank');
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            log('Debug tool loaded');
+            setTimeout(checkElements, 1000);
+        });
+    </script>
+</body>
+</html>
