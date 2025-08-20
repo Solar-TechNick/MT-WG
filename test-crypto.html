@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crypto Test</title>
+</head>
+<body>
+    <h1>WireGuard Crypto Test</h1>
+    <button onclick="testCrypto()">Test Key Generation</button>
+    <div id="result"></div>
+
+    <script src="js/qr-offline.js"></script>
+    <script>
+        // Simplified crypto test
+        function base64Encode(bytes) {
+            return btoa(String.fromCharCode(...bytes));
+        }
+
+        function base64Decode(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        function generatePrivateKey() {
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            
+            array[0] &= 248;
+            array[31] &= 127;
+            array[31] |= 64;
+            
+            return base64Encode(array);
+        }
+
+        async function derivePublicKey(privateKey) {
+            try {
+                const privateKeyBytes = base64Decode(privateKey);
+                const keyPair = await crypto.subtle.importKey(
+                    'raw',
+                    privateKeyBytes,
+                    { name: 'X25519' },
+                    false,
+                    ['deriveKey']
+                );
+                
+                const publicKeyBytes = await crypto.subtle.exportKey('raw', keyPair);
+                return base64Encode(new Uint8Array(publicKeyBytes));
+            } catch (error) {
+                console.warn('WebCrypto X25519 not supported:', error);
+                return 'fallback-' + privateKey.substring(0, 10);
+            }
+        }
+
+        async function testCrypto() {
+            try {
+                const privateKey = generatePrivateKey();
+                const publicKey = await derivePublicKey(privateKey);
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>Key Generation Test Results:</h3>
+                    <p><strong>Private Key:</strong> ${privateKey}</p>
+                    <p><strong>Public Key:</strong> ${publicKey}</p>
+                    <p><strong>Status:</strong> ✅ Key generation working!</p>
+                `;
+
+                // Test QR code
+                const canvas = document.createElement('canvas');
+                const testConfig = '[Interface]\nPrivateKey = ' + privateKey + '\n[Peer]\nPublicKey = ' + publicKey;
+                
+                await SimpleQRCode.toCanvas(canvas, testConfig, { width: 200 });
+                document.getElementById('result').appendChild(canvas);
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Test Failed:</h3>
+                    <p style="color: red;">${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

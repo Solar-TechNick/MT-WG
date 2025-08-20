@@ -1,0 +1,295 @@
+<!-- WireGuard Configuration Form Component -->
+<div id="wireguard-tab" class="tab-content active">
+    <h2>WireGuard VPN Configuration</h2>
+    
+    <div class="config-type-selector">
+        <label>
+            <input type="radio" name="wg-type" value="client-server" checked>
+            Client-Server VPN
+            <span class="tooltip">
+                <span class="tooltiptext">Traditional VPN setup with a central server and multiple clients</span>
+            </span>
+        </label>
+        <label>
+            <input type="radio" name="wg-type" value="site-to-site">
+            Site-to-Site VPN
+            <span class="tooltip">
+                <span class="tooltiptext">Connect multiple locations with mesh topology</span>
+            </span>
+        </label>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="wg-server-name">Server Name
+                <span class="tooltip">
+                    <span class="tooltiptext">Friendly name for the VPN server</span>
+                </span>
+            </label>
+            <input type="text" id="wg-server-name" value="WG-Server" placeholder="WG-Server">
+        </div>
+
+        <div class="form-group">
+            <label for="wg-server-port">Server Port
+                <span class="tooltip">
+                    <span class="tooltiptext">UDP port for WireGuard server (default: 51820)</span>
+                </span>
+            </label>
+            <input type="number" id="wg-server-port" value="51820" min="1024" max="65535">
+        </div>
+
+        <div class="form-group">
+            <label for="wg-server-ip">Server Network
+                <span class="tooltip">
+                    <span class="tooltiptext">VPN network range in CIDR notation</span>
+                </span>
+            </label>
+            <input type="text" id="wg-server-ip" value="10.0.0.0/24" placeholder="10.0.0.0/24">
+        </div>
+
+        <div class="form-group">
+            <label for="wg-server-endpoint">Public Endpoint
+                <span class="tooltip">
+                    <span class="tooltiptext">Public IP or domain name for clients to connect</span>
+                </span>
+            </label>
+            <input type="text" id="wg-server-endpoint" placeholder="vpn.example.com">
+        </div>
+
+        <div class="form-group">
+            <label for="wg-client-count">Number of Clients
+                <span class="tooltip">
+                    <span class="tooltiptext">How many client configurations to generate</span>
+                </span>
+            </label>
+            <input type="number" id="wg-client-count" value="5" min="1" max="50" onchange="window.wireGuardConfig?.updateNamingFields()">
+        </div>
+
+        <div class="form-group">
+            <label for="wg-interface-name">Interface Name
+                <span class="tooltip">
+                    <span class="tooltiptext">Name for the WireGuard interface in RouterOS</span>
+                </span>
+            </label>
+            <input type="text" id="wg-interface-name" value="wireguard1" placeholder="wireguard1">
+        </div>
+    </div>
+
+    <!-- Advanced Options Section -->
+    <div class="advanced-options">
+        <h3>Advanced Settings</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="wg-mtu">MTU Size
+                    <span class="tooltip">
+                        <span class="tooltiptext">Maximum Transmission Unit size (1420 recommended)</span>
+                    </span>
+                </label>
+                <input type="number" id="wg-mtu" value="1420" min="1280" max="1500">
+            </div>
+
+            <div class="form-group">
+                <label for="wg-keepalive">Persistent Keepalive
+                    <span class="tooltip">
+                        <span class="tooltiptext">Send keepalive packets every X seconds (0 = disabled)</span>
+                    </span>
+                </label>
+                <input type="number" id="wg-keepalive" value="25" min="0" max="300">
+            </div>
+
+            <div class="form-group">
+                <label for="wg-dns-servers">DNS Servers
+                    <span class="tooltip">
+                        <span class="tooltiptext">DNS servers for clients (comma-separated)</span>
+                    </span>
+                </label>
+                <input type="text" id="wg-dns-servers" value="1.1.1.1, 8.8.8.8" placeholder="1.1.1.1, 8.8.8.8">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="wg-enable-ipv6">
+                    Enable IPv6 Support
+                    <span class="tooltip">
+                        <span class="tooltiptext">Add IPv6 configuration to WireGuard</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="ipv6-config" style="display: none;">
+                <div class="form-group">
+                    <label for="wg-ipv6-network">IPv6 Network
+                        <span class="tooltip">
+                            <span class="tooltiptext">IPv6 network range for VPN clients</span>
+                        </span>
+                    </label>
+                    <input type="text" id="wg-ipv6-network" value="fd00::/64" placeholder="fd00::/64">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Management Section -->
+    <div class="key-management">
+        <h3>Key Management</h3>
+        <div class="form-group">
+            <label>
+                <input type="radio" name="key-mode" value="auto" checked>
+                Auto-generate keys
+                <span class="tooltip">
+                    <span class="tooltiptext">Automatically generate secure keys</span>
+                </span>
+            </label>
+            <label>
+                <input type="radio" name="key-mode" value="manual">
+                Manual key entry
+                <span class="tooltip">
+                    <span class="tooltiptext">Enter your own private keys</span>
+                </span>
+            </label>
+        </div>
+
+        <div id="manual-keys" class="manual-keys" style="display: none;">
+            <div class="form-group">
+                <label for="wg-server-private">Server Private Key</label>
+                <input type="text" id="wg-server-private" placeholder="Base64 encoded private key">
+            </div>
+            <div class="form-group">
+                <label for="wg-server-public">Server Public Key</label>
+                <input type="text" id="wg-server-public" placeholder="Base64 encoded public key">
+            </div>
+        </div>
+    </div>
+
+    <!-- Firewall Options -->
+    <div class="firewall-options" style="display: none;">
+        <h3>Firewall Configuration</h3>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="wg-enable-firewall">
+                Enable Advanced Firewall Rules
+                <span class="tooltip">
+                    <span class="tooltiptext">Configure MikroTik firewall for WireGuard</span>
+                </span>
+            </label>
+        </div>
+
+        <div id="firewall-rules" style="display: none;">
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="wg-fw-drop-invalid">
+                    Drop Invalid Connections
+                    <span class="tooltip">
+                        <span class="tooltiptext">Block malformed or invalid packets</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="wg-fw-allow-established">
+                    Allow Established Connections
+                    <span class="tooltip">
+                        <span class="tooltiptext">Allow established and related connections</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="wg-fw-protect-router">
+                    Protect Router Access
+                    <span class="tooltip">
+                        <span class="tooltiptext">Block external access to router services</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="wg-fw-log-blocked">
+                    Log Blocked Traffic
+                    <span class="tooltip">
+                        <span class="tooltiptext">Log dropped packets for debugging</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Naming Section -->
+    <div class="naming-section">
+        <h3>Configuration Naming</h3>
+        <div id="naming-fields">
+            <!-- Dynamic naming fields will be populated here -->
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button class="btn btn-primary" onclick="generateWireGuardConfig()">Generate Configuration</button>
+        <button class="btn btn-secondary" onclick="generateKeys()">Generate New Keys</button>
+        <button class="btn btn-success" onclick="downloadConfigFiles()">Download Config Files</button>
+    </div>
+
+    <!-- Output Type Selector -->
+    <div class="output-type-selector" style="margin-top: 20px;">
+        <h3>Configuration Output Type</h3>
+        <label>
+            <input type="radio" name="output-type" value="both" checked>
+            Both WireGuard & MikroTik
+            <span class="tooltip">
+                <span class="tooltiptext">Generate both WireGuard .conf files and MikroTik RouterOS scripts</span>
+            </span>
+        </label>
+        <label>
+            <input type="radio" name="output-type" value="wireguard">
+            WireGuard Only
+            <span class="tooltip">
+                <span class="tooltiptext">Generate only standard WireGuard .conf configuration files</span>
+            </span>
+        </label>
+        <label>
+            <input type="radio" name="output-type" value="mikrotik">
+            MikroTik Only
+            <span class="tooltip">
+                <span class="tooltiptext">Generate only MikroTik RouterOS scripts (.rsc files)</span>
+            </span>
+        </label>
+    </div>
+
+    <!-- Output Area -->
+    <div id="wg-output" class="output-area" style="display: none;">
+        <div class="output-tabs">
+            <button class="output-tab-btn active" onclick="showOutputTab('both')">All Configurations</button>
+            <button class="output-tab-btn" onclick="showOutputTab('wireguard')">WireGuard Configs</button>
+            <button class="output-tab-btn" onclick="showOutputTab('mikrotik')">MikroTik Scripts</button>
+        </div>
+        
+        <div id="output-both" class="output-tab-content active">
+            <h3>Generated Configuration</h3>
+            <div id="wg-config-sections">
+                <!-- Dynamic configuration sections will be added here -->
+            </div>
+        </div>
+        
+        <div id="output-wireguard" class="output-tab-content">
+            <h3>WireGuard Configuration Files</h3>
+            <div id="wg-only-sections">
+                <!-- WireGuard-only sections will be added here -->
+            </div>
+        </div>
+        
+        <div id="output-mikrotik" class="output-tab-content">
+            <h3>MikroTik RouterOS Scripts</h3>
+            <div id="mt-only-sections">
+                <!-- MikroTik-only sections will be added here -->
+            </div>
+        </div>
+        
+        <div class="global-actions">
+            <button class="btn btn-success" onclick="copyAllConfigurations()">Copy All</button>
+            <button class="btn btn-secondary" onclick="downloadQRCodes()">Download QR Codes</button>
+        </div>
+    </div>
+</div>

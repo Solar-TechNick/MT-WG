@@ -1,0 +1,189 @@
+<!-- LTE Mobile Configuration Form Component -->
+<div id="lte-tab" class="tab-content">
+    <h2>LTE Mobile Configuration</h2>
+    
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="lte-provider">German Mobile Provider
+                <span class="tooltip">
+                    <span class="tooltiptext">Select your German mobile network provider</span>
+                </span>
+            </label>
+            <select id="lte-provider" onchange="loadProviderSettings()">
+                <option value="">Select Provider...</option>
+                <option value="telekom">Deutsche Telekom</option>
+                <option value="telekom-alt">Deutsche Telekom (Alternative)</option>
+                <option value="telekom-ipv6">Deutsche Telekom (IPv6)</option>
+                <option value="vodafone">Vodafone</option>
+                <option value="vodafone-gigacube">Vodafone GigaCube</option>
+                <option value="o2-contract">O2 Contract</option>
+                <option value="o2-prepaid">O2 Prepaid</option>
+                <option value="1und1">1&1 (Vodafone Network)</option>
+                <option value="aldi">ALDI TALK</option>
+                <option value="congstar">congstar</option>
+                <option value="otelo">otelo</option>
+                <option value="mobilcom">mobilcom-debitel</option>
+                <option value="klarmobil">klarmobil</option>
+                <option value="drillisch">Drillisch</option>
+                <option value="freenet">freenet</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="lte-apn">APN
+                <span class="tooltip">
+                    <span class="tooltiptext">Access Point Name - automatically filled when selecting provider</span>
+                </span>
+            </label>
+            <input type="text" id="lte-apn" placeholder="internet.provider.de">
+        </div>
+
+        <div class="form-group">
+            <label for="lte-username">Username
+                <span class="tooltip">
+                    <span class="tooltiptext">APN username (leave empty if not required)</span>
+                </span>
+            </label>
+            <input type="text" id="lte-username" placeholder="Optional">
+        </div>
+
+        <div class="form-group">
+            <label for="lte-password">Password
+                <span class="tooltip">
+                    <span class="tooltiptext">APN password (leave empty if not required)</span>
+                </span>
+            </label>
+            <input type="password" id="lte-password" placeholder="Optional">
+        </div>
+
+        <div class="form-group">
+            <label for="lte-auth">Authentication
+                <span class="tooltip">
+                    <span class="tooltiptext">Authentication protocol (PAP or CHAP)</span>
+                </span>
+            </label>
+            <select id="lte-auth">
+                <option value="pap">PAP</option>
+                <option value="chap">CHAP</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="lte-sim-pin">SIM PIN
+                <span class="tooltip">
+                    <span class="tooltiptext">SIM card PIN (optional, leave empty if disabled)</span>
+                </span>
+            </label>
+            <input type="password" id="lte-sim-pin" placeholder="Optional">
+        </div>
+
+        <div class="form-group">
+            <label for="lte-interface">LTE Interface
+                <span class="tooltip">
+                    <span class="tooltiptext">RouterOS LTE interface name</span>
+                </span>
+            </label>
+            <input type="text" id="lte-interface" value="lte1" placeholder="lte1">
+        </div>
+
+        <div class="form-group">
+            <label for="lte-profile">Profile Name
+                <span class="tooltip">
+                    <span class="tooltiptext">APN profile name in RouterOS</span>
+                </span>
+            </label>
+            <input type="text" id="lte-profile" placeholder="Auto-generated">
+        </div>
+    </div>
+
+    <!-- LTE Advanced Options -->
+    <div class="lte-advanced">
+        <h3>Advanced LTE Settings</h3>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="lte-enable-nat" checked>
+                Enable NAT (Masquerade)
+                <span class="tooltip">
+                    <span class="tooltiptext">Enable Network Address Translation for LTE interface</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="lte-add-routes" checked>
+                Add Default Route
+                <span class="tooltip">
+                    <span class="tooltiptext">Add default route via LTE interface</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="lte-enable-firewall">
+                Enable Firewall Rules
+                <span class="tooltip">
+                    <span class="tooltiptext">Configure firewall rules for LTE interface</span>
+                </span>
+            </label>
+        </div>
+    </div>
+
+    <!-- LTE Firewall Options -->
+    <div class="lte-firewall-options" id="lte-firewall-options" style="display: none;">
+        <h3>LTE Firewall Configuration</h3>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="lte-fw-drop-invalid">
+                Drop Invalid Connections
+                <span class="tooltip">
+                    <span class="tooltiptext">Block malformed or invalid packets</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="lte-fw-allow-established" checked>
+                Allow Established Connections
+                <span class="tooltip">
+                    <span class="tooltiptext">Allow established and related connections</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="lte-fw-protect-router" checked>
+                Protect Router Access
+                <span class="tooltip">
+                    <span class="tooltiptext">Block external access to router services via LTE</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="lte-fw-log-blocked">
+                Log Blocked Traffic
+                <span class="tooltip">
+                    <span class="tooltiptext">Log dropped packets for debugging</span>
+                </span>
+            </label>
+        </div>
+    </div>
+
+    <!-- LTE Action Buttons -->
+    <div class="action-buttons">
+        <button class="btn btn-primary" onclick="generateLTEConfig()">Generate LTE Configuration</button>
+        <button class="btn btn-secondary" onclick="testAPNSettings()">Test APN Settings</button>
+    </div>
+
+    <!-- LTE Output Area -->
+    <div id="lte-output" class="output-area" style="display: none;">
+        <h3>Generated RouterOS Script</h3>
+        <div id="lte-config-output" class="code-output"></div>
+        <button class="btn btn-success" onclick="copyToClipboard(document.getElementById('lte-config-output').textContent)">Copy Script</button>
+    </div>
+</div>
