@@ -644,6 +644,83 @@ input[type="checkbox"] {
     font-style: italic;
 }
 
+/* Screenshot-exact configuration sections */
+.screenshot-config-section {
+    margin-bottom: 20px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.config-header-screenshot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 12px 15px;
+    border: 1px solid #e9ecef;
+    border-bottom: none;
+}
+
+.config-header-screenshot h4 {
+    margin: 0;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.copy-btn-green {
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.copy-btn-green:hover {
+    background: #218838;
+}
+
+.dark-code-block {
+    background: #2d3748;
+    border: 1px solid #e9ecef;
+    border-top: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dark-code-block pre {
+    background: #2d3748;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 15px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    border: none;
+}
+
+/* Tab styling to match screenshot */
+.tabs .tooltip-container {
+    flex: 1;
+}
+
+.tab-button {
+    width: 100%;
+    font-size: 13px;
+    padding: 12px 15px;
+}
+
+.tab-content {
+    min-height: 400px;
+    padding: 20px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .container {

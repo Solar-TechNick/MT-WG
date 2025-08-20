@@ -700,7 +700,7 @@ PersistentKeepalive = ${config.server.keepalive}
         return scripts;
     }
 
-    // Generate demo-style separated output sections
+    // Generate screenshot-style output sections exactly like pix
     generateEnhancedSections(config, outputType) {
         // Clear all output containers
         const wireguardOutput = document.getElementById('wireguardOutput');
@@ -717,7 +717,7 @@ PersistentKeepalive = ${config.server.keepalive}
             
             // Populate MikroTik tab with site scripts
             Object.entries(scripts).forEach(([siteName, script]) => {
-                this.createDemoConfigSection(mikrotikOutput, siteName, script, 'mikrotik');
+                this.createScreenshotConfigSection(mikrotikOutput, siteName, script);
             });
 
             // No WireGuard configs for site-to-site (MikroTik only)
@@ -731,20 +731,24 @@ PersistentKeepalive = ${config.server.keepalive}
             }
 
         } else {
-            // Client-server configuration
+            // Client-server configuration - Screenshot style
             const serverScript = this.generateServerScript();
             const clientConfigs = this.generateClientConfigs();
             
-            // Populate WireGuard tab
+            // Populate WireGuard tab with individual client sections
             if (wireguardOutput && (outputType === 'wireguard' || outputType === 'both')) {
-                clientConfigs.forEach(client => {
-                    this.createDemoConfigSection(wireguardOutput, client.name, client.config, 'wireguard');
+                // Add Server Configuration section
+                this.createScreenshotConfigSection(wireguardOutput, 'Server Configuration', serverScript);
+                
+                // Add individual client sections
+                clientConfigs.forEach((client, index) => {
+                    this.createScreenshotConfigSection(wireguardOutput, `Client ${index + 1} Configuration`, client.config);
                 });
             }
 
             // Populate MikroTik tab
             if (mikrotikOutput && (outputType === 'mikrotik' || outputType === 'both')) {
-                this.createDemoConfigSection(mikrotikOutput, config.server.name + ' (Server)', serverScript, 'mikrotik');
+                this.createScreenshotConfigSection(mikrotikOutput, 'Server Configuration', serverScript);
             }
 
             // Populate QR codes tab
@@ -754,7 +758,27 @@ PersistentKeepalive = ${config.server.keepalive}
         }
     }
 
-    // Create demo-style configuration section
+    // Create screenshot-exact configuration section
+    createScreenshotConfigSection(container, name, content) {
+        const section = document.createElement('div');
+        section.className = 'screenshot-config-section';
+        
+        const sectionId = 'config-' + Math.random().toString(36).substr(2, 9);
+        
+        section.innerHTML = `
+            <div class="config-header-screenshot">
+                <h4>${name}</h4>
+                <button class="copy-btn-green" onclick="copyConfigContent('${sectionId}')">Copy</button>
+            </div>
+            <div class="dark-code-block">
+                <pre id="${sectionId}">${content}</pre>
+            </div>
+        `;
+        
+        container.appendChild(section);
+    }
+
+    // Create demo-style configuration section (legacy)
     createDemoConfigSection(container, name, content, type) {
         const section = document.createElement('div');
         section.className = 'config-output';
