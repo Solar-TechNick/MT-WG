@@ -49,6 +49,42 @@ class WireGuardConfig {
                 }
             });
         }
+
+        // Output type change
+        document.querySelectorAll('input[name="output-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.updateUIForOutputType(e.target.value);
+            });
+        });
+    }
+
+    updateUIForOutputType(outputType) {
+        // Show/hide MikroTik-specific options
+        const mikrotikOptions = [
+            document.getElementById('firewall-options'),
+            document.querySelector('.firewall-options')
+        ];
+
+        mikrotikOptions.forEach(element => {
+            if (element) {
+                if (outputType === 'wireguard') {
+                    element.style.opacity = '0.5';
+                    element.style.pointerEvents = 'none';
+                } else {
+                    element.style.opacity = '1';
+                    element.style.pointerEvents = 'auto';
+                }
+            }
+        });
+
+        // Update button text based on output type
+        const generateBtn = document.querySelector('button[onclick="generateWireGuardConfig()"]');
+        if (generateBtn) {
+            const btnText = outputType === 'both' ? 'Generate Configuration' :
+                           outputType === 'wireguard' ? 'Generate WireGuard Configs' :
+                           'Generate MikroTik Scripts';
+            generateBtn.textContent = btnText;
+        }
     }
 
     // Generate Curve25519 key pair using WebCrypto API
@@ -503,42 +539,63 @@ async function generateWireGuardConfig() {
         showNotification('Generating WireGuard configuration...', 'info');
         
         const config = await window.wireGuardConfig.generateConfiguration();
+        const outputType = document.querySelector('input[name="output-type"]:checked').value;
         let output = '';
 
         if (config.type === 'site-to-site') {
-            // Generate site-to-site scripts
+            // Site-to-site only supports MikroTik RouterOS scripts
+            if (outputType === 'wireguard') {
+                showNotification('Site-to-site configurations only support MikroTik RouterOS scripts', 'info');
+                return;
+            }
+
             const scripts = window.wireGuardConfig.generateSiteToSiteScripts();
             
             output = '# Site-to-Site WireGuard Configuration\n';
-            output += '# Each site needs its own script\n\n';
+            output += '# Each site needs its own RouterOS script\n\n';
 
             Object.entries(scripts).forEach(([siteName, script]) => {
                 output += `# ==========================================\n`;
-                output += `# Script for ${siteName}\n`;
+                output += `# RouterOS Script for ${siteName}\n`;
                 output += `# ==========================================\n\n`;
                 output += script + '\n\n';
             });
 
         } else {
-            // Generate client-server configuration
-            const serverScript = window.wireGuardConfig.generateServerScript();
-            const clientConfigs = window.wireGuardConfig.generateClientConfigs();
+            // Client-server configuration - handle different output types
+            if (outputType === 'mikrotik' || outputType === 'both') {
+                const serverScript = window.wireGuardConfig.generateServerScript();
+                output += '# MikroTik RouterOS Server Configuration\n';
+                output += '# ==========================================\n\n';
+                output += serverScript + '\n\n';
+            }
 
-            output = serverScript + '\n\n';
-            output += '# Client Configuration Files\n';
-            output += '# Save each client config as a .conf file\n\n';
+            if (outputType === 'wireguard' || outputType === 'both') {
+                const clientConfigs = window.wireGuardConfig.generateClientConfigs();
+                
+                if (outputType === 'both') {
+                    output += '# WireGuard Client Configuration Files\n';
+                    output += '# ==========================================\n';
+                    output += '# Save each client config as a .conf file\n\n';
+                } else {
+                    output = '# WireGuard Client Configuration Files\n';
+                    output += '# Save each client config as a .conf file\n\n';
+                }
 
-            clientConfigs.forEach((client, index) => {
-                output += `# ${client.name}.conf\n`;
-                output += client.config + '\n';
-            });
+                clientConfigs.forEach((client, index) => {
+                    output += `# ${client.name}.conf\n`;
+                    output += client.config + '\n';
+                });
+            }
         }
 
         // Display output
         document.getElementById('wg-config-output').textContent = output;
         document.getElementById('wg-output').style.display = 'block';
         
-        showNotification('WireGuard configuration generated successfully!', 'success');
+        const configTypeText = outputType === 'both' ? 'WireGuard and MikroTik' : 
+                              outputType === 'wireguard' ? 'WireGuard' : 'MikroTik';
+        showNotification(`${configTypeText} configuration generated successfully!`, 'success');
 
     } catch (error) {
         console.error('Error generating WireGuard config:', error);
@@ -604,34 +661,50 @@ function downloadQRCodes() {
 function downloadConfigFiles() {
     try {
         const config = window.wireGuardConfig.configs;
+        const outputType = document.querySelector('input[name="output-type"]:checked').value;
         
         if (!config) {
             showNotification('No configuration available. Generate WireGuard config first.', 'error');
             return;
         }
 
+        let downloadCount = 0;
+
         if (config.type === 'site-to-site') {
-            // Download site-to-site scripts
+            // Site-to-site only supports RouterOS scripts
+            if (outputType === 'wireguard') {
+                showNotification('Site-to-site configurations only support MikroTik RouterOS scripts', 'info');
+                return;
+            }
+
             const scripts = window.wireGuardConfig.generateSiteToSiteScripts();
             
             Object.entries(scripts).forEach(([siteName, script]) => {
                 downloadTextFile(`${siteName}-WireGuard.rsc`, script);
+                downloadCount++;
             });
             
-            showNotification(`Downloaded ${Object.keys(scripts).length} RouterOS scripts`, 'success');
+            showNotification(`Downloaded ${downloadCount} RouterOS scripts`, 'success');
             
         } else {
-            // Download server script
-            const serverScript = window.wireGuardConfig.generateServerScript();
-            downloadTextFile('WireGuard-Server.rsc', serverScript);
+            // Client-server configuration - respect output type
+            if (outputType === 'mikrotik' || outputType === 'both') {
+                const serverScript = window.wireGuardConfig.generateServerScript();
+                downloadTextFile('WireGuard-Server.rsc', serverScript);
+                downloadCount++;
+            }
             
-            // Download client configs
-            const clientConfigs = window.wireGuardConfig.generateClientConfigs();
-            clientConfigs.forEach(client => {
-                downloadTextFile(`${client.name}.conf`, client.config);
-            });
+            if (outputType === 'wireguard' || outputType === 'both') {
+                const clientConfigs = window.wireGuardConfig.generateClientConfigs();
+                clientConfigs.forEach(client => {
+                    downloadTextFile(`${client.name}.conf`, client.config);
+                    downloadCount++;
+                });
+            }
             
-            showNotification(`Downloaded server script and ${clientConfigs.length} client configs`, 'success');
+            const typeText = outputType === 'both' ? 'config files' : 
+                           outputType === 'wireguard' ? 'client configs' : 'RouterOS scripts';
+            showNotification(`Downloaded ${downloadCount} ${typeText}`, 'success');
         }
 
     } catch (error) {

@@ -37,6 +37,31 @@
                     </label>
                 </div>
 
+                <div class="output-type-selector">
+                    <h3>Configuration Output Type</h3>
+                    <label>
+                        <input type="radio" name="output-type" value="both" checked>
+                        Both WireGuard & MikroTik
+                        <span class="tooltip">
+                            <span class="tooltiptext">Generate both WireGuard .conf files and MikroTik RouterOS scripts</span>
+                        </span>
+                    </label>
+                    <label>
+                        <input type="radio" name="output-type" value="wireguard">
+                        WireGuard Only
+                        <span class="tooltip">
+                            <span class="tooltiptext">Generate only standard WireGuard .conf configuration files</span>
+                        </span>
+                    </label>
+                    <label>
+                        <input type="radio" name="output-type" value="mikrotik">
+                        MikroTik Only
+                        <span class="tooltip">
+                            <span class="tooltiptext">Generate only MikroTik RouterOS scripts (.rsc files)</span>
+                        </span>
+                    </label>
+                </div>
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="wg-server-name">Server Name
