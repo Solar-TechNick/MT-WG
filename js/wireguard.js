@@ -58,6 +58,18 @@ class WireGuardGenerator {
         const clientConfigs = await this.createClientConfigs(data);
         const mikrotikScript = this.createMikroTikClientServerScript(data, serverConfig, clientConfigs);
         const qrCodes = await this.createQRCodes(clientConfigs);
+        
+        // Generate VyOS configurations
+        let vyosConfigs = [];
+        if (window.VyOSGenerator) {
+            vyosConfigs = window.VyOSGenerator.generate(data);
+        }
+        
+        // Generate OPNsense configurations
+        let opnsenseConfigs = [];
+        if (window.OPNsenseGenerator) {
+            opnsenseConfigs = window.OPNsenseGenerator.generate(data);
+        }
 
         return {
             wireguard: [
@@ -76,6 +88,8 @@ class WireGuardGenerator {
                     content: mikrotikScript
                 }
             ],
+            vyos: vyosConfigs,
+            opnsense: opnsenseConfigs,
             qrCodes: qrCodes
         };
     }
@@ -88,6 +102,18 @@ class WireGuardGenerator {
     async generateSiteToSiteConfigs(data) {
         const siteConfigs = await this.createSiteConfigs(data);
         const mikrotikScripts = this.createMikroTikSiteToSiteScripts(data, siteConfigs);
+        
+        // Generate VyOS configurations
+        let vyosConfigs = [];
+        if (window.VyOSGenerator) {
+            vyosConfigs = window.VyOSGenerator.generate(data);
+        }
+        
+        // Generate OPNsense configurations
+        let opnsenseConfigs = [];
+        if (window.OPNsenseGenerator) {
+            opnsenseConfigs = window.OPNsenseGenerator.generate(data);
+        }
 
         return {
             wireguard: siteConfigs.map((site, index) => ({
@@ -98,6 +124,8 @@ class WireGuardGenerator {
                 name: `Site ${index + 1} MikroTik Script`,
                 content: script
             })),
+            vyos: vyosConfigs,
+            opnsense: opnsenseConfigs,
             qrCodes: [] // Sites typically don't use QR codes
         };
     }

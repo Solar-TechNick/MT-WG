@@ -117,6 +117,8 @@ class WireGuardMikroTikApp {
         this.tabContents = document.querySelectorAll('.tab-content');
         this.wireguardOutput = document.getElementById('wireguardOutput');
         this.mikrotikOutput = document.getElementById('mikrotikOutput');
+        this.vyosOutput = document.getElementById('vyosOutput');
+        this.opnsenseOutput = document.getElementById('opnsenseOutput');
         this.qrOutput = document.getElementById('qrOutput');
     }
 
@@ -575,6 +577,16 @@ class WireGuardMikroTikApp {
             this.mikrotikOutput.innerHTML = this.formatMikroTikOutput(result.mikrotik);
         }
         
+        // Display VyOS scripts
+        if (this.vyosOutput && result.vyos) {
+            this.vyosOutput.innerHTML = this.formatVyOSOutput(result.vyos);
+        }
+        
+        // Display OPNsense scripts
+        if (this.opnsenseOutput && result.opnsense) {
+            this.opnsenseOutput.innerHTML = this.formatOPNsenseOutput(result.opnsense);
+        }
+        
         // Display QR codes
         if (this.qrOutput && result.qrCodes) {
             this.displayQRCodes(result.qrCodes);
@@ -596,6 +608,34 @@ class WireGuardMikroTikApp {
     }
 
     formatMikroTikOutput(scripts) {
+        return scripts.map(script => `
+            <div class="config-section">
+                <div class="config-header">
+                    <h4>${script.name}</h4>
+                    <button class="copy-btn" onclick="app.copyToClipboard('${script.name}', \`${script.content.replace(/`/g, '\\`')}\`)">Copy</button>
+                </div>
+                <div class="config-content">
+                    <pre>${script.content}</pre>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    formatVyOSOutput(scripts) {
+        return scripts.map(script => `
+            <div class="config-section">
+                <div class="config-header">
+                    <h4>${script.name}</h4>
+                    <button class="copy-btn" onclick="app.copyToClipboard('${script.name}', \`${script.content.replace(/`/g, '\\`')}\`)">Copy</button>
+                </div>
+                <div class="config-content">
+                    <pre>${script.content}</pre>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    formatOPNsenseOutput(scripts) {
         return scripts.map(script => `
             <div class="config-section">
                 <div class="config-header">
@@ -912,6 +952,22 @@ class WireGuardMikroTikApp {
             });
         }
 
+        // Add VyOS configs
+        if (this.lastGeneratedResult.vyos) {
+            allConfigs += '=== VYOS CONFIGURATION COMMANDS ===\n\n';
+            this.lastGeneratedResult.vyos.forEach(config => {
+                allConfigs += `${config.name}:\n${config.content}\n\n`;
+            });
+        }
+
+        // Add OPNsense configs
+        if (this.lastGeneratedResult.opnsense) {
+            allConfigs += '=== OPNSENSE CONFIGURATION ===\n\n';
+            this.lastGeneratedResult.opnsense.forEach(config => {
+                allConfigs += `${config.name}:\n${config.content}\n\n`;
+            });
+        }
+
         navigator.clipboard.writeText(allConfigs).then(() => {
             this.showNotification('All configurations copied to clipboard!', 'success');
         }).catch(() => {
@@ -1033,6 +1089,84 @@ class WireGuardMikroTikApp {
                 yPosition += 10;
                 
                 for (const config of this.lastGeneratedResult.mikrotik) {
+                    if (yPosition > pageHeight - 60) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(config.name, margin, yPosition);
+                    yPosition += 8;
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('courier', 'normal');
+                    const lines = config.content.split('\n');
+                    
+                    for (const line of lines) {
+                        if (yPosition > pageHeight - 20) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        doc.text(line, margin, yPosition);
+                        yPosition += 5;
+                    }
+                    yPosition += 10;
+                }
+            }
+
+            // VyOS Scripts
+            if (this.lastGeneratedResult.vyos) {
+                if (yPosition > pageHeight - 100) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('VyOS Configuration Commands', margin, yPosition);
+                yPosition += 10;
+                
+                for (const config of this.lastGeneratedResult.vyos) {
+                    if (yPosition > pageHeight - 60) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(config.name, margin, yPosition);
+                    yPosition += 8;
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('courier', 'normal');
+                    const lines = config.content.split('\n');
+                    
+                    for (const line of lines) {
+                        if (yPosition > pageHeight - 20) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        doc.text(line, margin, yPosition);
+                        yPosition += 5;
+                    }
+                    yPosition += 10;
+                }
+            }
+
+            // OPNsense Scripts
+            if (this.lastGeneratedResult.opnsense) {
+                if (yPosition > pageHeight - 100) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('OPNsense Configuration', margin, yPosition);
+                yPosition += 10;
+                
+                for (const config of this.lastGeneratedResult.opnsense) {
                     if (yPosition > pageHeight - 60) {
                         doc.addPage();
                         yPosition = 20;

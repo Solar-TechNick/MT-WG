@@ -16,7 +16,11 @@
       "Bash(git stash:*)",
       "Bash(find:*)",
       "Bash(mv:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(python3:*)",
+      "WebFetch(domain:docs.vyos.io)",
+      "WebSearch",
+      "WebFetch(domain:docs.opnsense.org)"
     ],
     "deny": [],
     "ask": []

@@ -243,9 +243,9 @@
                 <div class="output-section hidden" id="outputSection">
                     <div class="tabs">
                         <div class="tooltip-container">
-                            <button class="tab-button active" data-tab="wireguard">WireGuard Config</button>
+                            <button class="tab-button active" data-tab="wireguard">WireGuard & QR</button>
                             <button type="button" class="info-btn">?
-                                <div class="tooltip">Standard WireGuard configuration files that can be imported into any WireGuard client</div>
+                                <div class="tooltip">WireGuard configuration files and QR codes for mobile devices</div>
                             </button>
                         </div>
                         <div class="tooltip-container">
@@ -255,9 +255,15 @@
                             </button>
                         </div>
                         <div class="tooltip-container">
-                            <button class="tab-button" data-tab="qr">QR Codes</button>
+                            <button class="tab-button" data-tab="vyos">VyOS Script</button>
                             <button type="button" class="info-btn">?
-                                <div class="tooltip">QR codes for easy mobile device configuration - scan with WireGuard mobile app</div>
+                                <div class="tooltip">VyOS configuration commands for WireGuard setup with commit/save session</div>
+                            </button>
+                        </div>
+                        <div class="tooltip-container">
+                            <button class="tab-button" data-tab="opnsense">OPNsense Script</button>
+                            <button type="button" class="info-btn">?
+                                <div class="tooltip">OPNsense configuration with web GUI steps, CLI commands, and XML snippets</div>
                             </button>
                         </div>
                     </div>
@@ -265,6 +271,9 @@
                     <div class="tab-content active" id="wireguard-tab">
                         <h3>WireGuard Configuration Files</h3>
                         <div id="wireguardOutput"></div>
+                        
+                        <h3>QR Codes for Mobile Devices</h3>
+                        <div id="qrOutput"></div>
                     </div>
 
                     <div class="tab-content" id="mikrotik-tab">
@@ -272,9 +281,14 @@
                         <div id="mikrotikOutput"></div>
                     </div>
 
-                    <div class="tab-content" id="qr-tab">
-                        <h3>QR Codes for Mobile Devices</h3>
-                        <div id="qrOutput"></div>
+                    <div class="tab-content" id="vyos-tab">
+                        <h3>VyOS Configuration Commands</h3>
+                        <div id="vyosOutput"></div>
+                    </div>
+
+                    <div class="tab-content" id="opnsense-tab">
+                        <h3>OPNsense Configuration</h3>
+                        <div id="opnsenseOutput"></div>
                     </div>
                     
                     <div class="actions">
@@ -554,6 +568,8 @@
     <script src="js/utils.js"></script>
     <script src="js/crypto.js"></script>
     <script src="js/wireguard.js"></script>
+    <script src="js/vyos.js"></script>
+    <script src="js/opnsense.js"></script>
     <script src="js/lte.js"></script>
     <script src="js/app.js"></script>
 </body>
