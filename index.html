@@ -278,9 +278,9 @@
                     </div>
                     
                     <div class="actions">
-                        <button class="btn btn-success">Copy All Configurations</button>
-                        <button class="btn btn-secondary">Download QR Codes</button>
-                        <button class="btn btn-warning">Download as PDF</button>
+                        <button class="btn btn-success" onclick="app.copyAllConfigurations()">Copy All Configurations</button>
+                        <button class="btn btn-secondary" onclick="app.downloadQRCodes()">Download QR Codes</button>
+                        <button class="btn btn-warning" onclick="app.downloadAsPDF()">Download as PDF</button>
                     </div>
                 </div>
             </div>
@@ -490,7 +490,64 @@
 
     <!-- External Libraries -->
     <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="demo/qr-offline.js"></script>
+    
+    <!-- QR Code Setup -->
+    <script>
+        // QR Code wrapper to use qrcode-generator library
+        window.QRCodeWrapper = {
+            toCanvas: function(canvas, text, options) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        const qr = qrcode(0, 'M');
+                        qr.addData(text);
+                        qr.make();
+                        
+                        const cellSize = Math.floor((options.width || 200) / qr.getModuleCount());
+                        const size = cellSize * qr.getModuleCount();
+                        
+                        canvas.width = size;
+                        canvas.height = size;
+                        
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Clear background
+                        ctx.fillStyle = options.color?.light || '#FFFFFF';
+                        ctx.fillRect(0, 0, size, size);
+                        
+                        // Draw QR code
+                        ctx.fillStyle = options.color?.dark || '#000000';
+                        
+                        for (let row = 0; row < qr.getModuleCount(); row++) {
+                            for (let col = 0; col < qr.getModuleCount(); col++) {
+                                if (qr.isDark(row, col)) {
+                                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                                }
+                            }
+                        }
+                        
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            }
+        };
+        
+        // Check if qrcode-generator loaded, otherwise use offline version
+        window.addEventListener('load', function() {
+            if (typeof qrcode !== 'undefined') {
+                console.log('Using qrcode-generator library');
+                window.QRCode = window.QRCodeWrapper;
+            } else if (typeof window.SimpleQRCode !== 'undefined') {
+                console.warn('QR library not loaded, using offline SimpleQRCode');
+                window.QRCode = window.SimpleQRCode;
+            } else {
+                console.error('No QR code library available');
+            }
+        });
+    </script>
     
     <!-- Application Scripts -->
     <script src="js/utils.js"></script>
