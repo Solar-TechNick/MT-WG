@@ -268,7 +268,9 @@ class LTEConfigurator {
                 enableLteFirewall: config.enableLteFirewall || false,
                 setDefaultRoute: config.setDefaultRoute || false,
                 routeDistance: config.routeDistance || 1,
-                localLanNetwork: config.localLanNetwork || '192.168.1.0/24'
+                localLanNetwork: config.localLanNetwork || '192.168.1.0/24',
+                enableLteDns: config.enableLteDns || false,
+                lteDnsServers: config.lteDnsServers || '8.8.8.8, 1.1.1.1'
             });
             
             return {
@@ -397,9 +399,16 @@ class LTEConfigurator {
             script += '\n';
         }
 
-        // Step 8: Configure DNS (optional)
-        script += '# Step 8: Configure DNS (optional)\n';
-        script += '# /ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes\n\n';
+        // Step 8: Configure DNS
+        if (config.enableLteDns && config.lteDnsServers) {
+            script += '# Step 8: Configure DNS servers\n';
+            const dnsServers = config.lteDnsServers.split(',').map(s => s.trim()).join(',');
+            script += `/ip dns set servers=${dnsServers} allow-remote-requests=yes\n`;
+            script += `# DNS servers configured: ${dnsServers}\n\n`;
+        } else {
+            script += '# Step 8: Configure DNS (optional)\n';
+            script += '# /ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes\n\n';
+        }
 
         // Monitoring commands
         script += '# Monitoring and diagnostics commands:\n';
@@ -429,6 +438,11 @@ class LTEConfigurator {
         
         if (config.enableLteFirewall) {
             script += '# Firewall rules have been applied for security.\n';
+        }
+        
+        if (config.enableLteDns) {
+            const dnsServers = config.lteDnsServers.split(',').map(s => s.trim()).join(', ');
+            script += `# DNS servers have been configured: ${dnsServers}\n`;
         }
 
         return script;

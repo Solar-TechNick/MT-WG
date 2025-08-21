@@ -414,6 +414,20 @@
                                 <label for="localLanNetwork">Local LAN Network</label>
                                 <input type="text" id="localLanNetwork" value="192.168.1.0/24" placeholder="e.g., 192.168.1.0/24">
                             </div>
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="enableLteDns" checked>
+                                    Configure DNS Servers
+                                    <span class="tooltip">
+                                        <span class="tooltiptext">Automatically configure DNS servers for reliable internet access</span>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="form-group" id="dnsServersGroup">
+                                <label for="lteDnsServers">DNS Servers</label>
+                                <input type="text" id="lteDnsServers" value="8.8.8.8, 1.1.1.1" placeholder="e.g., 8.8.8.8, 1.1.1.1">
+                                <small>Comma-separated list of DNS server IPs</small>
+                            </div>
                         </div>
                     </div>
 

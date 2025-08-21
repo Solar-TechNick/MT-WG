@@ -21,6 +21,7 @@ class WireGuardMikroTikApp {
         this.initializeTheme();
         this.generateInitialKeys();
         this.updateClientSubnet();
+        this.toggleDnsServerFields(); // Initialize DNS fields visibility
         this.showPage('wireguard');
         
         // Initialize tooltips after everything is loaded
@@ -86,6 +87,9 @@ class WireGuardMikroTikApp {
         this.setDefaultRoute = document.getElementById('setDefaultRoute');
         this.routeDistance = document.getElementById('routeDistance');
         this.localLanNetwork = document.getElementById('localLanNetwork');
+        this.enableLteDns = document.getElementById('enableLteDns');
+        this.lteDnsServers = document.getElementById('lteDnsServers');
+        this.dnsServersGroup = document.getElementById('dnsServersGroup');
         this.generateLteConfig = document.getElementById('generateLteConfig');
         this.lteScriptOutput = document.getElementById('lteScriptOutput');
         this.lteOutputSection = document.getElementById('lteOutputSection');
@@ -174,6 +178,11 @@ class WireGuardMikroTikApp {
         // LTE configuration generation
         if (this.generateLteConfig) {
             this.generateLteConfig.addEventListener('click', () => this.generateLTEConfiguration());
+        }
+        
+        // DNS checkbox toggle
+        if (this.enableLteDns) {
+            this.enableLteDns.addEventListener('change', () => this.toggleDnsServerFields());
         }
         
         // Output tabs
@@ -766,6 +775,19 @@ class WireGuardMikroTikApp {
     }
 
     /**
+     * Toggle DNS server fields visibility
+     */
+    toggleDnsServerFields() {
+        if (this.dnsServersGroup && this.enableLteDns) {
+            if (this.enableLteDns.checked) {
+                this.dnsServersGroup.style.display = 'block';
+            } else {
+                this.dnsServersGroup.style.display = 'none';
+            }
+        }
+    }
+
+    /**
      * Generate LTE configuration
      */
     async generateLTEConfiguration() {
@@ -789,7 +811,9 @@ class WireGuardMikroTikApp {
                 enableLteFirewall: this.enableLteFirewall?.checked || false,
                 setDefaultRoute: this.setDefaultRoute?.checked || false,
                 routeDistance: parseInt(this.routeDistance?.value) || 1,
-                localLanNetwork: this.localLanNetwork?.value || '192.168.1.0/24'
+                localLanNetwork: this.localLanNetwork?.value || '192.168.1.0/24',
+                enableLteDns: this.enableLteDns?.checked || false,
+                lteDnsServers: this.lteDnsServers?.value || '8.8.8.8, 1.1.1.1'
             };
 
             // Generate LTE script
