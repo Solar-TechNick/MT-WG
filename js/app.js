@@ -952,13 +952,157 @@ class WireGuardMikroTikApp {
         }
     }
 
-    downloadAsPDF() {
+    async downloadAsPDF() {
         if (!this.lastGeneratedResult) {
             this.showNotification('No configurations to download. Generate a configuration first.', 'error');
             return;
         }
 
-        // For now, download as text files until PDF library is added
+        if (typeof window.jsPDF === 'undefined') {
+            this.showNotification('PDF library not loaded. Downloading as text file instead.', 'warning');
+            this.downloadAsTextFile();
+            return;
+        }
+
+        try {
+            const { jsPDF } = window.jsPDF;
+            const doc = new jsPDF();
+            
+            let yPosition = 20;
+            const pageHeight = doc.internal.pageSize.height;
+            const margin = 20;
+            const maxWidth = doc.internal.pageSize.width - (margin * 2);
+            
+            // Title
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text('WireGuard & MikroTik RouterOS Configuration', margin, yPosition);
+            yPosition += 15;
+            
+            // Date
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, margin, yPosition);
+            yPosition += 20;
+
+            // WireGuard Configurations
+            if (this.lastGeneratedResult.wireguard) {
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('WireGuard Configurations', margin, yPosition);
+                yPosition += 10;
+                
+                for (const config of this.lastGeneratedResult.wireguard) {
+                    // Check if we need a new page
+                    if (yPosition > pageHeight - 60) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(config.name, margin, yPosition);
+                    yPosition += 8;
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('courier', 'normal');
+                    const lines = config.content.split('\n');
+                    
+                    for (const line of lines) {
+                        if (yPosition > pageHeight - 20) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        doc.text(line, margin, yPosition);
+                        yPosition += 5;
+                    }
+                    yPosition += 10;
+                }
+            }
+
+            // MikroTik Scripts
+            if (this.lastGeneratedResult.mikrotik) {
+                if (yPosition > pageHeight - 100) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('MikroTik RouterOS Scripts', margin, yPosition);
+                yPosition += 10;
+                
+                for (const config of this.lastGeneratedResult.mikrotik) {
+                    if (yPosition > pageHeight - 60) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(config.name, margin, yPosition);
+                    yPosition += 8;
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('courier', 'normal');
+                    const lines = config.content.split('\n');
+                    
+                    for (const line of lines) {
+                        if (yPosition > pageHeight - 20) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        doc.text(line, margin, yPosition);
+                        yPosition += 5;
+                    }
+                    yPosition += 10;
+                }
+            }
+
+            // Add QR codes if available
+            if (this.lastGeneratedResult.qrCodes && this.lastGeneratedResult.qrCodes.length > 0) {
+                doc.addPage();
+                yPosition = 20;
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('QR Codes for Mobile Devices', margin, yPosition);
+                yPosition += 20;
+                
+                for (const qr of this.lastGeneratedResult.qrCodes) {
+                    const canvas = document.querySelector(`#qr-${qr.name.replace(/\s+/g, '-')}`);
+                    if (canvas) {
+                        if (yPosition > pageHeight - 120) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        
+                        doc.setFontSize(12);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text(qr.name, margin, yPosition);
+                        yPosition += 10;
+                        
+                        const imgData = canvas.toDataURL('image/png');
+                        doc.addImage(imgData, 'PNG', margin, yPosition, 60, 60);
+                        yPosition += 70;
+                    }
+                }
+            }
+
+            // Save the PDF
+            const filename = `wireguard-configurations-${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+            
+            this.showNotification('PDF downloaded successfully!', 'success');
+            
+        } catch (error) {
+            console.error('PDF generation failed:', error);
+            this.showNotification('PDF generation failed. Downloading as text file instead.', 'warning');
+            this.downloadAsTextFile();
+        }
+    }
+
+    downloadAsTextFile() {
         let allContent = '';
         
         if (this.lastGeneratedResult.wireguard) {
