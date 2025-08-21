@@ -1,1113 +1,541 @@
-// WireGuard configuration module
-class WireGuardConfig {
+/**
+ * WireGuard Configuration Generator
+ * Generates WireGuard configs, MikroTik scripts, and QR codes
+ */
+
+class WireGuardGenerator {
     constructor() {
-        this.keys = {};
         this.configs = {};
-        this.init();
     }
 
-    init() {
-        this.setupEventListeners();
-        console.log('WireGuard module initialized');
-    }
-
-    setupEventListeners() {
-        // Configuration type toggle (Client-Server vs Site-to-Site)
-        document.querySelectorAll('input[name="wg-type"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const siteToSiteConfig = document.getElementById('site-to-site-config');
-                if (e.target.value === 'site-to-site') {
-                    siteToSiteConfig.style.display = 'block';
-                } else {
-                    siteToSiteConfig.style.display = 'none';
-                }
-                this.updateNamingFields();
-            });
-        });
-
-        // Key mode toggle
-        document.querySelectorAll('input[name="key-mode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const manualKeys = document.getElementById('manual-keys');
-                if (e.target.value === 'manual') {
-                    manualKeys.style.display = 'block';
-                } else {
-                    manualKeys.style.display = 'none';
-                }
-            });
-        });
-
-        // IPv6 toggle
-        const ipv6Checkbox = document.getElementById('wg-enable-ipv6');
-        if (ipv6Checkbox) {
-            ipv6Checkbox.addEventListener('change', (e) => {
-                const ipv6Config = document.querySelector('.ipv6-config');
-                if (e.target.checked) {
-                    ipv6Config.style.display = 'block';
-                } else {
-                    ipv6Config.style.display = 'none';
-                }
-            });
-        }
-
-        // Firewall toggle
-        const firewallCheckbox = document.getElementById('wg-enable-firewall');
-        if (firewallCheckbox) {
-            firewallCheckbox.addEventListener('change', (e) => {
-                const firewallOptions = document.getElementById('firewall-options');
-                if (e.target.checked) {
-                    firewallOptions.style.display = 'block';
-                } else {
-                    firewallOptions.style.display = 'none';
-                }
-            });
-        }
-
-        // Output type change
-        document.querySelectorAll('input[name="output-type"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                this.updateUIForOutputType(e.target.value);
-            });
-        });
-
-        // Initialize naming fields
-        this.updateNamingFields();
-    }
-
-    updateUIForOutputType(outputType) {
-        // Show/hide MikroTik-specific options
-        const mikrotikOptions = [
-            document.getElementById('firewall-options'),
-            document.querySelector('.firewall-options')
-        ];
-
-        mikrotikOptions.forEach(element => {
-            if (element) {
-                if (outputType === 'wireguard') {
-                    element.style.opacity = '0.5';
-                    element.style.pointerEvents = 'none';
-                } else {
-                    element.style.opacity = '1';
-                    element.style.pointerEvents = 'auto';
-                }
-            }
-        });
-
-        // Update button text based on output type
-        const generateBtn = document.querySelector('button[onclick="generateWireGuardConfig()"]');
-        if (generateBtn) {
-            const btnText = outputType === 'both' ? 'Generate Configuration' :
-                           outputType === 'wireguard' ? 'Generate WireGuard Configs' :
-                           'Generate MikroTik Scripts';
-            generateBtn.textContent = btnText;
-        }
-    }
-
-    updateNamingFields() {
-        const count = parseInt(document.getElementById('wg-client-count').value) || 5;
-        const configType = document.querySelector('input[name="wg-type"]:checked').value;
-        const namingFields = document.getElementById('naming-fields');
-        
-        // Clear existing fields
-        namingFields.innerHTML = '';
-
-        // Add server name field for client-server mode
-        if (configType === 'client-server') {
-            const serverField = document.createElement('div');
-            serverField.className = 'form-group';
-            serverField.innerHTML = `
-                <label for="custom-server-name">Server Name</label>
-                <input type="text" id="custom-server-name" value="WG-Server" placeholder="WG-Server">
-            `;
-            namingFields.appendChild(serverField);
-        }
-
-        // Add client/site name fields
-        for (let i = 1; i <= count; i++) {
-            const field = document.createElement('div');
-            field.className = 'form-group';
-            
-            const label = configType === 'site-to-site' ? 'Site' : 'Client';
-            const defaultName = configType === 'site-to-site' ? `Site-${String.fromCharCode(64 + i)}` : `Client-${i}`;
-            
-            field.innerHTML = `
-                <label for="custom-name-${i}">${label} ${i} Name</label>
-                <input type="text" id="custom-name-${i}" value="${defaultName}" placeholder="${defaultName}">
-            `;
-            namingFields.appendChild(field);
-        }
-    }
-
-    getCustomNames() {
-        const count = parseInt(document.getElementById('wg-client-count').value) || 5;
-        const configType = document.querySelector('input[name="wg-type"]:checked').value;
-        const names = {};
-
-        // Get server name for client-server mode
-        if (configType === 'client-server') {
-            const serverNameInput = document.getElementById('custom-server-name');
-            names.server = serverNameInput ? serverNameInput.value || 'WG-Server' : 'WG-Server';
-        }
-
-        // Get client/site names
-        names.clients = [];
-        for (let i = 1; i <= count; i++) {
-            const nameInput = document.getElementById(`custom-name-${i}`);
-            const defaultName = configType === 'site-to-site' ? `Site-${String.fromCharCode(64 + i)}` : `Client-${i}`;
-            names.clients.push(nameInput ? nameInput.value || defaultName : defaultName);
-        }
-
-        return names;
-    }
-
-    // Generate Curve25519 key pair using working implementation
-    async generateKeyPair() {
-        const privateKey = this.generatePrivateKey();
-        const publicKey = await this.derivePublicKey(privateKey);
-        return { 
-            privateKey: privateKey, 
-            publicKey: publicKey 
-        };
-    }
-
-    // Generate WireGuard private key with proper clamping
-    generatePrivateKey() {
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        
-        // Apply WireGuard key clamping for Curve25519
-        array[0] &= 248;
-        array[31] &= 127;
-        array[31] |= 64;
-        
-        return this.base64Encode(array);
-    }
-
-    // Derive public key from private key
-    async derivePublicKey(privateKey) {
+    /**
+     * Generate all configurations based on input data
+     * @param {object} data Configuration data
+     * @returns {Promise<object>} Generated configurations
+     */
+    async generate(data) {
         try {
-            const privateKeyBytes = this.base64Decode(privateKey);
-            const keyPair = await crypto.subtle.importKey(
-                'raw',
-                privateKeyBytes,
-                { name: 'X25519' },
-                false,
-                ['deriveKey']
-            );
+            this.validateInputData(data);
             
-            const publicKeyBytes = await crypto.subtle.exportKey('raw', keyPair);
-            return this.base64Encode(new Uint8Array(publicKeyBytes));
-        } catch (error) {
-            console.warn('WebCrypto X25519 not supported, using fallback');
-            return this.generateFallbackPublicKey(privateKey);
-        }
-    }
-
-    // Fallback public key generation for unsupported browsers
-    generateFallbackPublicKey(privateKey) {
-        const hash = Array.from(privateKey).reduce((hash, char) => {
-            return ((hash << 5) - hash + char.charCodeAt(0)) & 0xffffffff;
-        }, 0);
-        
-        const array = new Uint8Array(32);
-        for (let i = 0; i < 32; i++) {
-            array[i] = (hash + i * 31) & 0xFF;
-        }
-        
-        return this.base64Encode(array);
-    }
-
-    // Fallback key generation using crypto.getRandomValues
-    generateKeyPairFallback() {
-        try {
-            // Generate 32 random bytes for private key
-            const privateKeyBytes = new Uint8Array(32);
-            crypto.getRandomValues(privateKeyBytes);
+            let result = {};
             
-            // Clamp the private key (required for Curve25519)
-            privateKeyBytes[0] &= 248;
-            privateKeyBytes[31] &= 127;
-            privateKeyBytes[31] |= 64;
-
-            const privateKey = this.bufferToBase64(privateKeyBytes);
-            
-            // For demo purposes, generate a mock public key
-            // In real implementation, we'd compute the actual public key
-            const publicKeyBytes = new Uint8Array(32);
-            crypto.getRandomValues(publicKeyBytes);
-            const publicKey = this.bufferToBase64(publicKeyBytes);
-
-            return {
-                privateKey,
-                publicKey
-            };
-        } catch (error) {
-            console.error('Fallback key generation failed:', error);
-            throw new Error('Unable to generate cryptographic keys');
-        }
-    }
-
-    // Convert buffer to base64
-    bufferToBase64(buffer) {
-        const bytes = new Uint8Array(buffer);
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
-    }
-
-    // Generate pre-shared key
-    generatePresharedKey() {
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        return this.base64Encode(array);
-    }
-
-    // Base64 encoding functions
-    base64Encode(bytes) {
-        return btoa(String.fromCharCode(...bytes));
-    }
-
-    base64Decode(base64) {
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        return bytes;
-    }
-
-    // Generate WireGuard configuration
-    async generateConfiguration() {
-        try {
-            const configType = document.querySelector('input[name="wg-type"]:checked').value;
-            const serverName = document.getElementById('wg-server-name').value || 'WG-Server';
-            const serverPort = document.getElementById('wg-server-port').value || '51820';
-            const serverNetwork = document.getElementById('wg-server-ip').value || '10.0.0.1/24';
-            const clientCount = parseInt(document.getElementById('wg-client-count').value) || 5;
-            const serverEndpoint = document.getElementById('wg-server-endpoint').value;
-            const interfaceName = document.getElementById('wg-interface-name').value || 'wireguard1';
-            const mtu = document.getElementById('wg-mtu').value || '1420';
-            const keepalive = document.getElementById('wg-keepalive').value || '25';
-            const enableNat = document.getElementById('wg-enable-nat').checked;
-            const enableFirewall = document.getElementById('wg-enable-firewall').checked;
-            const dnsServers = document.getElementById('wg-dns-servers').value || '1.1.1.1, 8.8.8.8';
-            const allowedIPs = document.getElementById('wg-allowed-ips').value || '0.0.0.0/0';
-            const routingTable = document.getElementById('wg-routing-table').value;
-            const enableIPv6 = document.getElementById('wg-enable-ipv6').checked;
-            const ipv6Network = document.getElementById('wg-ipv6-network').value || 'fd00::/64';
-            const keyMode = document.querySelector('input[name="key-mode"]:checked').value;
-
-            // Firewall settings
-            const firewallSettings = {
-                allowWireGuardPort: document.getElementById('fw-allow-wireguard-port').checked,
-                allowVpnForward: document.getElementById('fw-allow-vpn-forward').checked,
-                allowInternetAccess: document.getElementById('fw-allow-internet-access').checked,
-                allowLocalNetwork: document.getElementById('fw-allow-local-network').checked,
-                dropInvalid: document.getElementById('fw-drop-invalid').checked,
-                logBlocked: document.getElementById('fw-log-blocked').checked,
-                localNetworks: document.getElementById('fw-local-networks').value,
-                wanInterface: document.getElementById('fw-wan-interface').value || 'WAN'
-            };
-
-            // Handle different configuration types
-            if (configType === 'site-to-site') {
-                return await this.generateSiteToSiteConfig();
-            }
-
-            // Validate inputs
-            if (!isValidCIDR(serverNetwork)) {
-                throw new Error('Invalid server network CIDR notation');
-            }
-
-            if (!serverEndpoint) {
-                throw new Error('Server endpoint is required');
-            }
-
-            // Generate or get server keys
-            let serverKeys;
-            if (keyMode === 'manual') {
-                const privateKey = document.getElementById('wg-server-private').value;
-                const publicKey = document.getElementById('wg-server-public').value;
-                
-                if (!privateKey || !publicKey) {
-                    throw new Error('Manual keys are required when manual mode is selected');
-                }
-                
-                if (!isValidWireGuardKey(privateKey) || !isValidWireGuardKey(publicKey)) {
-                    throw new Error('Invalid WireGuard key format');
-                }
-                
-                serverKeys = { privateKey, publicKey };
+            if (data.type === 'client-server') {
+                result = await this.generateClientServerConfigs(data);
+            } else if (data.type === 'site-to-site') {
+                result = await this.generateSiteToSiteConfigs(data);
             } else {
-                serverKeys = await this.generateKeyPair();
+                throw new Error('Invalid configuration type');
             }
-
-            // Calculate subnet and generate client IPs
-            const subnet = calculateSubnet(serverNetwork, clientCount);
-            if (clientCount > subnet.maxHosts) {
-                throw new Error(`Network ${serverNetwork} can only accommodate ${subnet.maxHosts} clients, but ${clientCount} requested`);
-            }
-
-            const clientIPs = generateClientIPs(serverNetwork, clientCount);
-
-            // Get custom names
-            const customNames = this.getCustomNames();
-
-            // Generate client configurations
-            const clients = [];
-            for (let i = 0; i < clientCount; i++) {
-                const clientKeys = await this.generateKeyPair();
-                const presharedKey = this.generatePresharedKey();
-                
-                clients.push({
-                    name: customNames.clients[i] || `Client-${i + 1}`,
-                    privateKey: clientKeys.privateKey,
-                    publicKey: clientKeys.publicKey,
-                    presharedKey: presharedKey,
-                    allowedIPs: clientIPs[i],
-                    address: clientIPs[i]
-                });
-            }
-
-            // Store configuration
-            this.configs = {
-                server: {
-                    name: customNames.server || serverName,
-                    privateKey: serverKeys.privateKey,
-                    publicKey: serverKeys.publicKey,
-                    network: serverNetwork,
-                    port: serverPort,
-                    endpoint: serverEndpoint,
-                    interface: interfaceName,
-                    mtu: mtu,
-                    keepalive: keepalive,
-                    enableNat: enableNat,
-                    enableFirewall: enableFirewall,
-                    dnsServers: dnsServers,
-                    allowedIPs: allowedIPs,
-                    routingTable: routingTable,
-                    enableIPv6: enableIPv6,
-                    ipv6Network: ipv6Network,
-                    firewallSettings: firewallSettings
-                },
-                clients: clients,
-                subnet: subnet
-            };
-
-            return this.configs;
-
+            
+            return result;
+            
         } catch (error) {
             console.error('Configuration generation failed:', error);
             throw error;
         }
     }
 
-    // Generate RouterOS script for server
-    generateServerScript() {
-        const config = this.configs;
-        if (!config.server) {
-            throw new Error('No server configuration available');
+    /**
+     * Validate input configuration data
+     * @param {object} data 
+     */
+    validateInputData(data) {
+        if (!data) throw new Error('Configuration data is required');
+        if (!data.type) throw new Error('Configuration type is required');
+        if (!data.server) throw new Error('Server configuration is required');
+        if (!data.server.keys || !data.server.keys.privateKey) {
+            throw new Error('Server keys are required');
+        }
+    }
+
+    /**
+     * Generate client-server configurations
+     * @param {object} data 
+     * @returns {Promise<object>}
+     */
+    async generateClientServerConfigs(data) {
+        const serverConfig = this.createServerConfig(data);
+        const clientConfigs = await this.createClientConfigs(data);
+        const mikrotikScript = this.createMikroTikClientServerScript(data, serverConfig, clientConfigs);
+        const qrCodes = await this.createQRCodes(clientConfigs);
+
+        return {
+            wireguard: [
+                {
+                    name: 'Server Configuration',
+                    content: this.formatWireGuardConfig(serverConfig, 'server')
+                },
+                ...clientConfigs.map((client, index) => ({
+                    name: `Client ${index + 1} Configuration`,
+                    content: this.formatWireGuardConfig(client, 'client')
+                }))
+            ],
+            mikrotik: [
+                {
+                    name: 'MikroTik RouterOS Script',
+                    content: mikrotikScript
+                }
+            ],
+            qrCodes: qrCodes
+        };
+    }
+
+    /**
+     * Generate site-to-site configurations
+     * @param {object} data 
+     * @returns {Promise<object>}
+     */
+    async generateSiteToSiteConfigs(data) {
+        const siteConfigs = await this.createSiteConfigs(data);
+        const mikrotikScripts = this.createMikroTikSiteToSiteScripts(data, siteConfigs);
+
+        return {
+            wireguard: siteConfigs.map((site, index) => ({
+                name: `Site ${index + 1} Configuration`,
+                content: this.formatWireGuardConfig(site, 'site')
+            })),
+            mikrotik: mikrotikScripts.map((script, index) => ({
+                name: `Site ${index + 1} MikroTik Script`,
+                content: script
+            })),
+            qrCodes: [] // Sites typically don't use QR codes
+        };
+    }
+
+    /**
+     * Create server configuration
+     * @param {object} data 
+     * @returns {object}
+     */
+    createServerConfig(data) {
+        const peers = [];
+        
+        if (data.clients) {
+            data.clients.forEach((client, index) => {
+                const peer = {
+                    comment: client.name || `Client-${index + 1}`,
+                    publicKey: client.publicKey,
+                    allowedIPs: client.ip
+                };
+                
+                if (client.psk) {
+                    peer.preSharedKey = client.psk;
+                }
+                
+                peers.push(peer);
+            });
         }
 
-        const server = config.server;
-        let script = `# WireGuard Server Configuration for MikroTik RouterOS
-# Generated on ${new Date().toLocaleString()}
-# Server: ${server.name}
+        return {
+            name: data.server.name,
+            interface: {
+                privateKey: data.server.keys.privateKey,
+                address: data.server.ip,
+                listenPort: data.server.port,
+                mtu: data.interface?.mtu || 1420
+            },
+            peers: peers,
+            options: data.options || {}
+        };
+    }
 
-`;
+    /**
+     * Create client configurations
+     * @param {object} data 
+     * @returns {Promise<Array>}
+     */
+    async createClientConfigs(data) {
+        const configs = [];
+        
+        if (!data.clients || data.clients.length === 0) {
+            return configs;
+        }
 
+        for (let i = 0; i < data.clients.length; i++) {
+            const client = data.clients[i];
+            
+            const config = {
+                name: client.name || `Client-${i + 1}`,
+                interface: {
+                    privateKey: client.privateKey,
+                    address: client.ip,
+                    dns: data.dns || [],
+                    mtu: data.interface?.mtu || 1420
+                },
+                peer: {
+                    comment: data.server.name,
+                    publicKey: data.server.keys.publicKey,
+                    endpoint: `${data.server.endpoint}:${data.server.port}`,
+                    allowedIPs: data.allowedIPs || '0.0.0.0/0',
+                    persistentKeepalive: data.options?.keepalive || 25
+                }
+            };
+            
+            if (client.psk) {
+                config.peer.preSharedKey = client.psk;
+            }
+            
+            configs.push(config);
+        }
+        
+        return configs;
+    }
+
+    /**
+     * Create site configurations for site-to-site
+     * @param {object} data 
+     * @returns {Promise<Array>}
+     */
+    async createSiteConfigs(data) {
+        const configs = [];
+        
+        if (!data.sites || data.sites.length === 0) {
+            return configs;
+        }
+
+        // Generate keys for each site if not provided
+        for (let i = 0; i < data.sites.length; i++) {
+            const site = data.sites[i];
+            
+            if (!site.keys) {
+                site.keys = await window.WireGuardCrypto.generateKeyPair();
+            }
+        }
+
+        // Create configuration for each site
+        for (let i = 0; i < data.sites.length; i++) {
+            const site = data.sites[i];
+            const peers = [];
+            
+            // Add all other sites as peers
+            for (let j = 0; j < data.sites.length; j++) {
+                if (i !== j) {
+                    const peerSite = data.sites[j];
+                    peers.push({
+                        comment: peerSite.name,
+                        publicKey: peerSite.keys.publicKey,
+                        endpoint: peerSite.ddns || `${peerSite.endpoint}:${peerSite.listenPort}`,
+                        allowedIPs: peerSite.localNetwork,
+                        persistentKeepalive: data.options?.keepalive || 25
+                    });
+                }
+            }
+            
+            const config = {
+                name: site.name,
+                interface: {
+                    privateKey: site.keys.privateKey,
+                    address: this.generateSiteTransferIP(data.transferSubnet || '10.2.2.0/24', i),
+                    listenPort: site.listenPort,
+                    mtu: data.interface?.mtu || 1420
+                },
+                peers: peers,
+                localNetwork: site.localNetwork,
+                ddns: site.ddns,
+                enableDDNS: site.enableDDNS
+            };
+            
+            configs.push(config);
+        }
+        
+        return configs;
+    }
+
+    /**
+     * Generate transfer IP for site-to-site
+     * @param {string} transferSubnet 
+     * @param {number} siteIndex 
+     * @returns {string}
+     */
+    generateSiteTransferIP(transferSubnet, siteIndex) {
+        const [network, cidr] = transferSubnet.split('/');
+        const parts = network.split('.');
+        parts[3] = (parseInt(parts[3]) + siteIndex + 1).toString();
+        return `${parts.join('.')}/${cidr}`;
+    }
+
+    /**
+     * Format WireGuard configuration file
+     * @param {object} config 
+     * @param {string} type 
+     * @returns {string}
+     */
+    formatWireGuardConfig(config, type) {
+        let content = `# ${config.name}\n# Generated by WireGuard MikroTik Configurator\n\n`;
+        
+        // Interface section
+        content += '[Interface]\n';
+        content += `PrivateKey = ${config.interface.privateKey}\n`;
+        content += `Address = ${config.interface.address}\n`;
+        
+        if (config.interface.listenPort) {
+            content += `ListenPort = ${config.interface.listenPort}\n`;
+        }
+        
+        if (config.interface.dns && config.interface.dns.length > 0) {
+            content += `DNS = ${config.interface.dns.join(', ')}\n`;
+        }
+        
+        if (config.interface.mtu) {
+            content += `MTU = ${config.interface.mtu}\n`;
+        }
+        
+        // Add PostUp/PostDown for routing if needed
+        if (type === 'server' && config.options?.enableNAT) {
+            const iface = config.interface.address.split('/')[0];
+            content += `PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE\n`;
+            content += `PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE\n`;
+        }
+        
+        content += '\n';
+        
+        // Peer sections
+        if (config.peers) {
+            config.peers.forEach(peer => {
+                content += '[Peer]\n';
+                if (peer.comment) {
+                    content += `# ${peer.comment}\n`;
+                }
+                content += `PublicKey = ${peer.publicKey}\n`;
+                if (peer.preSharedKey) {
+                    content += `PresharedKey = ${peer.preSharedKey}\n`;
+                }
+                content += `AllowedIPs = ${peer.allowedIPs}\n`;
+                if (peer.endpoint) {
+                    content += `Endpoint = ${peer.endpoint}\n`;
+                }
+                if (peer.persistentKeepalive) {
+                    content += `PersistentKeepalive = ${peer.persistentKeepalive}\n`;
+                }
+                content += '\n';
+            });
+        }
+        
+        // Single peer for client configs
+        if (config.peer) {
+            content += '[Peer]\n';
+            if (config.peer.comment) {
+                content += `# ${config.peer.comment}\n`;
+            }
+            content += `PublicKey = ${config.peer.publicKey}\n`;
+            if (config.peer.preSharedKey) {
+                content += `PresharedKey = ${config.peer.preSharedKey}\n`;
+            }
+            content += `AllowedIPs = ${config.peer.allowedIPs}\n`;
+            content += `Endpoint = ${config.peer.endpoint}\n`;
+            if (config.peer.persistentKeepalive) {
+                content += `PersistentKeepalive = ${config.peer.persistentKeepalive}\n`;
+            }
+        }
+        
+        return content.trim();
+    }
+
+    /**
+     * Create MikroTik RouterOS script for client-server
+     * @param {object} data 
+     * @param {object} serverConfig 
+     * @param {Array} clientConfigs 
+     * @returns {string}
+     */
+    createMikroTikClientServerScript(data, serverConfig, clientConfigs) {
+        let script = `# MikroTik RouterOS WireGuard Configuration\n`;
+        script += `# Generated by WireGuard MikroTik Configurator\n`;
+        script += `# Server: ${data.server.name}\n\n`;
+        
+        // Remove existing WireGuard interface
+        script += `# Remove existing WireGuard interface (if any)\n`;
+        script += `/interface wireguard remove [find name="${data.interface.name}"]\n\n`;
+        
         // Create WireGuard interface
-        script += `# Create WireGuard interface
-/interface/wireguard add name=${server.interface} private-key="${server.privateKey}" listen-port=${server.port} mtu=${server.mtu}
-
-`;
-
-        // Add server IP address
-        const [serverIP] = server.network.split('/');
-        script += `# Add server IP address
-/ip/address add address=${server.network} interface=${server.interface}
-
-`;
-
-        // Add client peers
-        script += `# Add client peers
-`;
-        config.clients.forEach((client, index) => {
-            script += `/interface/wireguard/peers add interface=${server.interface} public-key="${client.publicKey}" preshared-key="${client.presharedKey}" allowed-address=${client.allowedIPs} persistent-keepalive=${server.keepalive} comment="${client.name}"
-`;
-        });
-
-        // Add firewall rules if enabled
-        if (server.enableFirewall && server.firewallSettings) {
-            script += `
-# Firewall rules for WireGuard
-`;
-            const fw = server.firewallSettings;
-
-            // Drop invalid connections first (if enabled)
-            if (fw.dropInvalid) {
-                script += `/ip/firewall/filter add chain=input action=drop connection-state=invalid comment="Drop invalid connections"
-/ip/firewall/filter add chain=forward action=drop connection-state=invalid comment="Drop invalid forward connections"
-
-`;
-            }
-
-            // Allow WireGuard port
-            if (fw.allowWireGuardPort) {
-                const logAction = fw.logBlocked ? ' log=yes log-prefix="WG-ALLOW: "' : '';
-                script += `/ip/firewall/filter add chain=input action=accept protocol=udp dst-port=${server.port}${logAction} comment="Allow WireGuard port ${server.port}"
-
-`;
-            }
-
-            // Allow established and related connections
-            script += `/ip/firewall/filter add chain=input action=accept connection-state=established,related comment="Allow established/related"
-/ip/firewall/filter add chain=forward action=accept connection-state=established,related comment="Allow established/related forward"
-
-`;
-
-            // VPN forwarding rules
-            if (fw.allowVpnForward) {
-                script += `/ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} comment="Allow VPN clients forward"
-`;
-            }
-
-            // Internet access for VPN clients
-            if (fw.allowInternetAccess) {
-                script += `/ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} out-interface-list=${fw.wanInterface} comment="Allow VPN internet access"
-`;
-            }
-
-            // Local network access for VPN clients
-            if (fw.allowLocalNetwork && fw.localNetworks) {
-                const networks = fw.localNetworks.split(',').map(net => net.trim()).filter(net => net);
-                networks.forEach(network => {
-                    script += `/ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} dst-address=${network} comment="Allow VPN access to ${network}"
-`;
-                });
-            }
-
-            // Log blocked traffic (if enabled)
-            if (fw.logBlocked) {
-                script += `
-# Log blocked traffic
-/ip/firewall/filter add chain=input action=log log-prefix="INPUT-DROP: " comment="Log dropped input"
-/ip/firewall/filter add chain=forward action=log log-prefix="FORWARD-DROP: " comment="Log dropped forward"
-`;
-            }
-
-            script += `
-`;
-        } else if (server.enableFirewall) {
-            // Fallback to basic firewall rules
-            script += `
-# Basic firewall rules for WireGuard
-/ip/firewall/filter add chain=input action=accept protocol=udp dst-port=${server.port} comment="Allow WireGuard"
-/ip/firewall/filter add chain=forward action=accept in-interface=${server.interface} comment="Allow WireGuard forward"
-/ip/firewall/filter add chain=forward action=accept out-interface=${server.interface} comment="Allow WireGuard forward out"
-`;
+        script += `# Create WireGuard interface\n`;
+        script += `/interface wireguard add name="${data.interface.name}" private-key="${serverConfig.interface.privateKey}" listen-port=${data.server.port}`;
+        if (data.interface.mtu) {
+            script += ` mtu=${data.interface.mtu}`;
         }
-
-        // Add NAT rules if enabled
-        if (server.enableNat) {
-            script += `
-# NAT rules for WireGuard clients
-/ip/firewall/nat add chain=srcnat action=masquerade out-interface-list=WAN src-address=${server.network} comment="WireGuard NAT"
-`;
+        script += `\n\n`;
+        
+        // Set interface IP address
+        script += `# Configure interface IP address\n`;
+        script += `/ip address add address=${data.server.ip} interface=${data.interface.name}\n\n`;
+        
+        // Add peers
+        if (clientConfigs.length > 0) {
+            script += `# Add WireGuard peers\n`;
+            clientConfigs.forEach((client, index) => {
+                script += `/interface wireguard peers add interface="${data.interface.name}" `;
+                script += `comment="${client.name}" `;
+                script += `public-key="${client.peer.publicKey}" `;
+                script += `allowed-address="${client.interface.address}"`;
+                
+                if (client.peer.preSharedKey) {
+                    script += ` preshared-key="${client.peer.preSharedKey}"`;
+                }
+                
+                script += `\n`;
+            });
+            script += `\n`;
         }
-
+        
+        // Firewall rules
+        if (data.options?.generateFirewall) {
+            script += `# Firewall rules\n`;
+            script += `/ip firewall filter add chain=input action=accept protocol=udp dst-port=${data.server.port} comment="Allow WireGuard"\n`;
+            script += `/ip firewall filter add chain=forward action=accept in-interface=${data.interface.name} comment="Allow WireGuard forward"\n`;
+            script += `/ip firewall filter add chain=forward action=accept out-interface=${data.interface.name} comment="Allow WireGuard forward"\n\n`;
+        }
+        
+        // NAT rules
+        if (data.options?.enableNAT) {
+            script += `# NAT configuration\n`;
+            script += `/ip firewall nat add chain=srcnat action=masquerade out-interface-list=WAN comment="WireGuard NAT"\n\n`;
+        }
+        
+        // Routing
+        if (!data.options?.noRoutingTable) {
+            script += `# Routing (if needed)\n`;
+            script += `# Add custom routes here if required\n\n`;
+        }
+        
+        script += `# WireGuard configuration completed\n`;
+        script += `# You can now connect clients using the generated configurations\n`;
+        
         return script;
     }
 
-    // Generate client configuration files
-    generateClientConfigs() {
-        const config = this.configs;
-        if (!config.clients || !config.server) {
-            throw new Error('No client configurations available');
-        }
-
-        const clientConfigs = [];
-
-        config.clients.forEach((client, index) => {
-            const clientConfig = `[Interface]
-PrivateKey = ${client.privateKey}
-Address = ${client.address}
-DNS = ${config.server.dnsServers}
-MTU = ${config.server.mtu}
-
-[Peer]
-PublicKey = ${config.server.publicKey}
-PresharedKey = ${client.presharedKey}
-Endpoint = ${config.server.endpoint}:${config.server.port}
-AllowedIPs = ${config.server.allowedIPs}
-PersistentKeepalive = ${config.server.keepalive}
-`;
-
-            clientConfigs.push({
-                name: client.name,
-                config: clientConfig
-            });
-        });
-
-        return clientConfigs;
-    }
-
-    // Generate site-to-site configuration
-    async generateSiteToSiteConfig() {
-        const siteCount = parseInt(document.getElementById('wg-client-count').value) || 3;
-        const transferSubnet = document.getElementById('wg-transfer-subnet')?.value || '10.2.2.0/24';
-        const localNetwork = document.getElementById('wg-local-network')?.value || '192.168.1.0/24';
-        const globalPSK = document.getElementById('wg-global-psk')?.value || '';
-        const interfaceName = document.getElementById('wg-interface-name').value || 'wireguard1';
-        const port = document.getElementById('wg-server-port').value || '51820';
-        const mtu = document.getElementById('wg-mtu').value || '1420';
-        const keepalive = document.getElementById('wg-keepalive').value || '25';
-        const dnsServers = document.getElementById('wg-dns-servers').value || '1.1.1.1, 8.8.8.8';
-        
-        // Advanced options
-        const enablePSK = document.getElementById('wg-enable-psk')?.checked !== false;
-        const noRoutingTable = document.getElementById('wg-no-routing-table')?.checked || false;
-        const enableNAT = document.getElementById('wg-enable-nat')?.checked !== false;
-        const generateFirewall = document.getElementById('wg-generate-firewall')?.checked !== false;
-
-        // Generate site configurations
-        const sites = [];
-        for (let i = 0; i < siteCount; i++) {
-            const siteKeys = await this.generateKeyPair();
-            const siteNetwork = `10.${i + 1}.0.0/24`; // Each site gets its own subnet
-            const vpnIP = this.calculateSiteIP(transferSubnet, i);
-
-            // Generate PSK if enabled
-            const presharedKey = enablePSK ? (globalPSK || this.generatePresharedKey()) : '';
-
-            sites.push({
-                name: `Site-${i + 1}`,
-                privateKey: siteKeys.privateKey,
-                publicKey: siteKeys.publicKey,
-                network: siteNetwork,
-                localNetwork: localNetwork,
-                vpnIP: vpnIP,
-                port: parseInt(port) + i,
-                endpoint: `site${i + 1}.example.com`, // Placeholder
-                presharedKey: presharedKey
-            });
-        }
-
-        this.configs = {
-            type: 'site-to-site',
-            sites: sites,
-            transferSubnet: transferSubnet,
-            localNetwork: localNetwork,
-            interface: interfaceName,
-            mtu: mtu,
-            keepalive: keepalive,
-            dnsServers: dnsServers,
-            enablePSK: enablePSK,
-            noRoutingTable: noRoutingTable,
-            enableNAT: enableNAT,
-            generateFirewall: generateFirewall,
-            globalPSK: globalPSK
-        };
-
-        return this.configs;
-    }
-
-    // Calculate site IP from transfer subnet
-    calculateSiteIP(transferSubnet, siteIndex) {
-        const [network, cidr] = transferSubnet.split('/');
-        const parts = network.split('.');
-        const baseIP = `${parts[0]}.${parts[1]}.${parts[2]}.${parseInt(parts[3]) + siteIndex + 1}`;
-        return `${baseIP}/32`;
-    }
-
-    // Generate site-to-site RouterOS scripts
-    generateSiteToSiteScripts() {
-        const config = this.configs;
-        if (!config.sites) {
-            throw new Error('No site-to-site configuration available');
-        }
-
-        const scripts = {};
-
-        config.sites.forEach((site, index) => {
-            let script = `# Site-to-Site WireGuard Configuration for ${site.name}
-# Generated on ${new Date().toLocaleString()}
-
-`;
-
-            // Create WireGuard interface
-            script += `# Create WireGuard interface
-/interface/wireguard add name=${config.interface} private-key="${site.privateKey}" listen-port=${site.port} mtu=${config.mtu}
-
-`;
-
-            // Add site IP address
-            script += `# Add VPN IP address
-/ip/address add address=${site.vpnIP} interface=${config.interface}
-
-`;
-
-            // Add peers (all other sites)
-            script += `# Add peer sites
-`;
-            config.sites.forEach((peer, peerIndex) => {
-                if (peerIndex !== index) {
-                    const presharedKey = config.enablePSK ? (peer.presharedKey || this.generatePresharedKey()) : '';
-                    const pskParam = presharedKey ? ` preshared-key="${presharedKey}"` : '';
-                    const allowedIPs = config.noRoutingTable ? peer.vpnIP.split('/')[0] + '/32' : `${peer.network},${peer.vpnIP.split('/')[0]}/32`;
+    /**
+     * Create MikroTik RouterOS scripts for site-to-site
+     * @param {object} data 
+     * @param {Array} siteConfigs 
+     * @returns {Array<string>}
+     */
+    createMikroTikSiteToSiteScripts(data, siteConfigs) {
+        return siteConfigs.map((site, index) => {
+            let script = `# MikroTik RouterOS WireGuard Site-to-Site Configuration\n`;
+            script += `# Site: ${site.name}\n`;
+            script += `# Generated by WireGuard MikroTik Configurator\n\n`;
+            
+            // Remove existing interface
+            script += `# Remove existing WireGuard interface (if any)\n`;
+            script += `/interface wireguard remove [find name="${data.interface.name}"]\n\n`;
+            
+            // Create interface
+            script += `# Create WireGuard interface\n`;
+            script += `/interface wireguard add name="${data.interface.name}" private-key="${site.interface.privateKey}" listen-port=${site.interface.listenPort}`;
+            if (data.interface.mtu) {
+                script += ` mtu=${data.interface.mtu}`;
+            }
+            script += `\n\n`;
+            
+            // Set IP address
+            script += `# Configure interface IP address\n`;
+            script += `/ip address add address=${site.interface.address} interface=${data.interface.name}\n\n`;
+            
+            // Add peers
+            if (site.peers.length > 0) {
+                script += `# Add WireGuard peers\n`;
+                site.peers.forEach(peer => {
+                    script += `/interface wireguard peers add interface="${data.interface.name}" `;
+                    script += `comment="${peer.comment}" `;
+                    script += `public-key="${peer.publicKey}" `;
+                    script += `allowed-address="${peer.allowedIPs}" `;
+                    script += `endpoint-address="${peer.endpoint.split(':')[0]}" `;
+                    script += `endpoint-port=${peer.endpoint.split(':')[1]}`;
                     
-                    script += `/interface/wireguard/peers add interface=${config.interface} public-key="${peer.publicKey}"${pskParam} allowed-address=${allowedIPs} endpoint-address=${peer.endpoint} endpoint-port=${peer.port} persistent-keepalive=${config.keepalive} comment="${peer.name}"
-`;
-                }
-            });
-
-            // Add routing (if not disabled)
-            if (!config.noRoutingTable) {
-                script += `
-# Add routes to peer networks
-`;
-                config.sites.forEach((peer, peerIndex) => {
-                    if (peerIndex !== index) {
-                        script += `/ip/route add dst-address=${peer.network} gateway=${config.interface} comment="Route to ${peer.name}"
-`;
+                    if (peer.persistentKeepalive) {
+                        script += ` persistent-keepalive=${peer.persistentKeepalive}`;
                     }
+                    
+                    script += `\n`;
                 });
+                script += `\n`;
             }
-
-            // Add NAT/Masquerade (if enabled)
-            if (config.enableNAT) {
-                script += `
-# Enable NAT/Masquerade for local network
-/ip/firewall/nat add chain=srcnat src-address=${config.localNetwork} out-interface-list=WAN action=masquerade comment="NAT for local network"
-`;
-            }
-
-            // Add firewall rules (if enabled)
-            if (config.generateFirewall) {
-                script += `
-# Firewall rules for WireGuard
-/ip/firewall/filter add chain=input protocol=udp dst-port=${site.port} action=accept comment="Allow WireGuard"
-/ip/firewall/filter add chain=forward in-interface=${config.interface} action=accept comment="Allow WireGuard forwarding"
-/ip/firewall/filter add chain=forward out-interface=${config.interface} action=accept comment="Allow WireGuard forwarding"
-`;
-            }
-
-            scripts[site.name] = script;
-        });
-
-        return scripts;
-    }
-
-    // Generate screenshot-style output sections exactly like pix
-    generateEnhancedSections(config, outputType) {
-        // Clear all output containers
-        const wireguardOutput = document.getElementById('wireguardOutput');
-        const mikrotikOutput = document.getElementById('mikrotikOutput');
-        const qrOutput = document.getElementById('qrOutput');
-        
-        if (wireguardOutput) wireguardOutput.innerHTML = '';
-        if (mikrotikOutput) mikrotikOutput.innerHTML = '';
-        if (qrOutput) qrOutput.innerHTML = '';
-
-        if (config.type === 'site-to-site') {
-            // Site-to-site configurations
-            const scripts = this.generateSiteToSiteScripts();
             
-            // Populate MikroTik tab with site scripts
-            Object.entries(scripts).forEach(([siteName, script]) => {
-                this.createScreenshotConfigSection(mikrotikOutput, siteName, script);
+            // Routes for remote networks
+            script += `# Routes to remote sites\n`;
+            site.peers.forEach(peer => {
+                script += `/ip route add dst-address=${peer.allowedIPs} gateway=${data.interface.name}\n`;
             });
-
-            // No WireGuard configs for site-to-site (MikroTik only)
-            if (wireguardOutput) {
-                wireguardOutput.innerHTML = '<div class="info-message">Site-to-site configurations use MikroTik RouterOS scripts only.</div>';
-            }
-
-            // No QR codes for site-to-site
-            if (qrOutput) {
-                qrOutput.innerHTML = '<div class="info-message">QR codes are only available for client-server configurations.</div>';
-            }
-
-        } else {
-            // Client-server configuration - Screenshot style
-            const serverScript = this.generateServerScript();
-            const clientConfigs = this.generateClientConfigs();
+            script += `\n`;
             
-            // Populate WireGuard tab with individual client sections
-            if (wireguardOutput && (outputType === 'wireguard' || outputType === 'both')) {
-                // Add Server Configuration section
-                this.createScreenshotConfigSection(wireguardOutput, 'Server Configuration', serverScript);
-                
-                // Add individual client sections
-                clientConfigs.forEach((client, index) => {
-                    this.createScreenshotConfigSection(wireguardOutput, `Client ${index + 1} Configuration`, client.config);
-                });
+            // DDNS configuration if enabled
+            if (site.enableDDNS && site.ddns) {
+                script += `# Dynamic DNS configuration\n`;
+                script += `# Configure your DDNS provider settings here\n`;
+                script += `# Example for common providers:\n`;
+                script += `# /tool cloud ddns-update-status\n\n`;
             }
-
-            // Populate MikroTik tab
-            if (mikrotikOutput && (outputType === 'mikrotik' || outputType === 'both')) {
-                this.createScreenshotConfigSection(mikrotikOutput, 'Server Configuration', serverScript);
-            }
-
-            // Populate QR codes tab
-            if (qrOutput && (outputType === 'wireguard' || outputType === 'both')) {
-                this.generateQRCodes(clientConfigs, qrOutput);
-            }
-        }
-    }
-
-    // Create screenshot-exact configuration section
-    createScreenshotConfigSection(container, name, content) {
-        const section = document.createElement('div');
-        section.className = 'screenshot-config-section';
-        
-        const sectionId = 'config-' + Math.random().toString(36).substr(2, 9);
-        
-        section.innerHTML = `
-            <div class="config-header-screenshot">
-                <h4>${name}</h4>
-                <button class="copy-btn-green" onclick="copyConfigContent('${sectionId}')">Copy</button>
-            </div>
-            <div class="dark-code-block">
-                <pre id="${sectionId}">${content}</pre>
-            </div>
-        `;
-        
-        container.appendChild(section);
-    }
-
-    // Create demo-style configuration section (legacy)
-    createDemoConfigSection(container, name, content, type) {
-        const section = document.createElement('div');
-        section.className = 'config-output';
-        
-        const fileExt = type === 'mikrotik' ? '.rsc' : '.conf';
-        const sectionId = 'config-' + Math.random().toString(36).substr(2, 9);
-        
-        section.innerHTML = `
-            <h4>${name}</h4>
-            <pre class="code-block" id="${sectionId}">${content}</pre>
-            <div class="config-actions">
-                <button class="btn btn-secondary" onclick="copyConfigContent('${sectionId}')">Copy</button>
-                <button class="btn btn-primary" onclick="downloadConfig('${sectionId}', '${name}', '${type}')">Download ${fileExt}</button>
-            </div>
-        `;
-        
-        container.appendChild(section);
-    }
-
-    // Generate QR codes for demo-style output
-    async generateQRCodes(clientConfigs, container) {
-        container.innerHTML = '<div class="loading">Generating QR codes...</div>';
-        
-        try {
-            const qrCodes = await window.qrGenerator.generateClientQRCodes(clientConfigs);
-            container.innerHTML = '';
             
-            qrCodes.forEach((qr, index) => {
-                const qrItem = document.createElement('div');
-                qrItem.className = 'qr-item';
-                
-                qrItem.innerHTML = `
-                    <h4>${qr.name}</h4>
-                    <div class="qr-container">
-                        <img src="${qr.qrDataUrl}" alt="QR Code for ${qr.name}" style="max-width: 250px; border: 1px solid #ddd;">
-                    </div>
-                    <div class="qr-actions">
-                        <button class="btn btn-secondary" onclick="downloadQRImage('${qr.qrDataUrl}', '${qr.name}')">Download QR</button>
-                    </div>
-                `;
-                
-                container.appendChild(qrItem);
-            });
+            // Firewall rules
+            if (data.options?.generateFirewall) {
+                script += `# Firewall rules\n`;
+                script += `/ip firewall filter add chain=input action=accept protocol=udp dst-port=${site.interface.listenPort} comment="Allow WireGuard ${site.name}"\n`;
+                script += `/ip firewall filter add chain=forward action=accept in-interface=${data.interface.name} comment="Allow WireGuard ${site.name} forward"\n`;
+                script += `/ip firewall filter add chain=forward action=accept out-interface=${data.interface.name} comment="Allow WireGuard ${site.name} forward"\n\n`;
+            }
             
-        } catch (error) {
-            container.innerHTML = '<div class="error-message">Failed to generate QR codes: ' + error.message + '</div>';
-        }
-    }
-
-    // Create individual collapsible configuration section (legacy)
-    createConfigSection(container, initialName, content, type) {
-        const section = document.createElement('div');
-        section.className = 'config-section';
-        
-        const sectionId = 'section-' + Math.random().toString(36).substr(2, 9);
-        const fileExt = type === 'mikrotik' ? '.rsc' : '.conf';
-        
-        section.innerHTML = `
-            <div class="config-header" onclick="toggleSection('${sectionId}')">
-                <div class="config-title">
-                    <input type="text" value="${initialName}" onchange="updateSectionName(this, '${sectionId}')" onclick="event.stopPropagation()">
-                </div>
-                <div class="config-actions">
-                    <button class="copy-btn" onclick="copySection('${sectionId}'); event.stopPropagation()">Copy</button>
-                    <span class="toggle-icon">▼</span>
-                </div>
-            </div>
-            <div class="config-content" id="${sectionId}">
-                <div class="config-code">${content}</div>
-                <button class="copy-btn" onclick="copySection('${sectionId}')">Copy Configuration</button>
-                <button class="btn btn-secondary" onclick="downloadSection('${sectionId}', '${type}')">Download ${fileExt}</button>
-            </div>
-        `;
-        
-        container.appendChild(section);
-        
-        // Store content for copy/download functions
-        section.setAttribute('data-content', content);
-        section.setAttribute('data-type', type);
-    }
-}
-
-// Global functions for HTML onclick handlers
-async function generateWireGuardConfig() {
-    try {
-        showNotification('Generating WireGuard configuration...', 'info');
-        
-        const config = await window.wireGuardConfig.generateConfiguration();
-        const outputType = document.querySelector('input[name="output-type"]:checked').value;
-        
-        // Generate enhanced sections
-        window.wireGuardConfig.generateEnhancedSections(config, outputType);
-        
-        document.getElementById('wg-output').style.display = 'block';
-        
-        const configTypeText = outputType === 'both' ? 'WireGuard and MikroTik' : 
-                              outputType === 'wireguard' ? 'WireGuard' : 'MikroTik';
-        showNotification(`${configTypeText} configuration generated successfully!`, 'success');
-
-    } catch (error) {
-        console.error('Error generating WireGuard config:', error);
-        showNotification(`Error: ${error.message}`, 'error');
-    }
-}
-
-async function generateKeys() {
-    try {
-        const keyPair = await window.wireGuardConfig.generateKeyPair();
-        
-        // Update manual key fields
-        document.getElementById('wg-server-private').value = keyPair.privateKey;
-        document.getElementById('wg-server-public').value = keyPair.publicKey;
-        
-        // Switch to manual mode
-        document.querySelector('input[name="key-mode"][value="manual"]').checked = true;
-        document.getElementById('manual-keys').style.display = 'block';
-        
-        showNotification('New key pair generated!', 'success');
-    } catch (error) {
-        console.error('Error generating keys:', error);
-        showNotification(`Error: ${error.message}`, 'error');
-    }
-}
-
-// Demo-style helper functions
-function copyConfigContent(elementId) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        navigator.clipboard.writeText(element.textContent).then(() => {
-            showNotification('Configuration copied to clipboard', 'success');
-        }).catch(err => {
-            console.error('Copy failed:', err);
-            showNotification('Failed to copy configuration', 'error');
+            script += `# ${site.name} configuration completed\n`;
+            
+            return script;
         });
     }
-}
 
-function downloadConfig(elementId, name, type) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        const content = element.textContent;
-        const fileExt = type === 'mikrotik' ? '.rsc' : '.conf';
-        const filename = `${name}${fileExt}`;
+    /**
+     * Create QR codes for client configurations
+     * @param {Array} clientConfigs 
+     * @returns {Promise<Array>}
+     */
+    async createQRCodes(clientConfigs) {
+        const qrCodes = [];
         
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        
-        showNotification(`Downloaded ${filename}`, 'success');
-    }
-}
-
-function downloadQRImage(dataUrl, name) {
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `${name}-QR.png`;
-    a.click();
-    
-    showNotification(`Downloaded ${name}-QR.png`, 'success');
-}
-
-async function downloadQRCodes() {
-    try {
-        const config = window.wireGuardConfig.configs;
-        
-        if (!config || !config.clients) {
-            showNotification('No client configurations available. Generate WireGuard config first.', 'error');
-            return;
-        }
-
-        if (config.type === 'site-to-site') {
-            showNotification('QR codes are only available for client-server configurations', 'info');
-            return;
-        }
-
-        showNotification('Generating QR codes...', 'info');
-
-        // Generate client configs for QR codes
-        const clientConfigs = window.wireGuardConfig.generateClientConfigs();
-        
-        // Generate QR codes (async)
-        const qrCodes = await window.qrGenerator.generateClientQRCodes(clientConfigs);
-        
-        if (qrCodes.length === 0) {
-            showNotification('No QR codes could be generated', 'error');
-            return;
-        }
-
-        // Display QR codes in modal
-        window.qrGenerator.displayQRCodes(qrCodes);
-        
-        showNotification(`Generated ${qrCodes.length} QR codes for mobile clients`, 'success');
-
-    } catch (error) {
-        console.error('Error generating QR codes:', error);
-        showNotification(`Error: ${error.message}`, 'error');
-    }
-}
-
-function downloadConfigFiles() {
-    try {
-        const config = window.wireGuardConfig.configs;
-        const outputType = document.querySelector('input[name="output-type"]:checked').value;
-        
-        if (!config) {
-            showNotification('No configuration available. Generate WireGuard config first.', 'error');
-            return;
-        }
-
-        let downloadCount = 0;
-
-        if (config.type === 'site-to-site') {
-            // Site-to-site only supports RouterOS scripts
-            if (outputType === 'wireguard') {
-                showNotification('Site-to-site configurations only support MikroTik RouterOS scripts', 'info');
-                return;
-            }
-
-            const scripts = window.wireGuardConfig.generateSiteToSiteScripts();
-            
-            Object.entries(scripts).forEach(([siteName, script]) => {
-                downloadTextFile(`${siteName}-WireGuard.rsc`, script);
-                downloadCount++;
+        for (const client of clientConfigs) {
+            qrCodes.push({
+                name: client.name,
+                content: this.formatWireGuardConfig(client, 'client')
             });
-            
-            showNotification(`Downloaded ${downloadCount} RouterOS scripts`, 'success');
-            
-        } else {
-            // Client-server configuration - respect output type
-            if (outputType === 'mikrotik' || outputType === 'both') {
-                const serverScript = window.wireGuardConfig.generateServerScript();
-                downloadTextFile('WireGuard-Server.rsc', serverScript);
-                downloadCount++;
-            }
-            
-            if (outputType === 'wireguard' || outputType === 'both') {
-                const clientConfigs = window.wireGuardConfig.generateClientConfigs();
-                clientConfigs.forEach(client => {
-                    downloadTextFile(`${client.name}.conf`, client.config);
-                    downloadCount++;
-                });
-            }
-            
-            const typeText = outputType === 'both' ? 'config files' : 
-                           outputType === 'wireguard' ? 'client configs' : 'RouterOS scripts';
-            showNotification(`Downloaded ${downloadCount} ${typeText}`, 'success');
         }
-
-    } catch (error) {
-        console.error('Error downloading config files:', error);
-        showNotification(`Error: ${error.message}`, 'error');
-    }
-}
-
-function downloadTextFile(filename, content) {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-}
-
-// Global functions for section management
-function updateNamingFields() {
-    if (window.wireGuardConfig) {
-        window.wireGuardConfig.updateNamingFields();
-    }
-}
-
-function toggleSection(sectionId) {
-    const content = document.getElementById(sectionId);
-    const header = content.previousElementSibling;
-    const icon = header.querySelector('.toggle-icon');
-    
-    if (content.classList.contains('expanded')) {
-        content.classList.remove('expanded');
-        header.classList.remove('active');
-        icon.classList.remove('expanded');
-    } else {
-        content.classList.add('expanded');
-        header.classList.add('active');
-        icon.classList.add('expanded');
-    }
-}
-
-function copySection(sectionId) {
-    const section = document.getElementById(sectionId).parentElement;
-    const content = section.getAttribute('data-content');
-    
-    copyToClipboard(content);
-}
-
-function downloadSection(sectionId, type) {
-    const section = document.getElementById(sectionId).parentElement;
-    const content = section.getAttribute('data-content');
-    const nameInput = section.querySelector('.config-title input');
-    const name = nameInput.value || 'config';
-    const extension = type === 'mikrotik' ? '.rsc' : '.conf';
-    
-    downloadTextFile(name + extension, content);
-}
-
-function copyAllConfigurations() {
-    const sections = document.querySelectorAll('.config-section');
-    let allContent = '';
-    
-    sections.forEach((section, index) => {
-        const name = section.querySelector('.config-title input').value;
-        const content = section.getAttribute('data-content');
         
-        if (index > 0) allContent += '\n\n';
-        allContent += `# ==========================================\n`;
-        allContent += `# ${name}\n`;
-        allContent += `# ==========================================\n\n`;
-        allContent += content;
-    });
-    
-    copyToClipboard(allContent);
+        return qrCodes;
+    }
+
+    /**
+     * Export configurations as downloadable files
+     * @param {object} configurations 
+     * @returns {object}
+     */
+    exportConfigurations(configurations) {
+        const files = [];
+        
+        // WireGuard configurations
+        if (configurations.wireguard) {
+            configurations.wireguard.forEach(config => {
+                files.push({
+                    name: `${config.name.replace(/\s+/g, '_')}.conf`,
+                    content: config.content,
+                    type: 'text/plain'
+                });
+            });
+        }
+        
+        // MikroTik scripts
+        if (configurations.mikrotik) {
+            configurations.mikrotik.forEach(script => {
+                files.push({
+                    name: `${script.name.replace(/\s+/g, '_')}.rsc`,
+                    content: script.content,
+                    type: 'text/plain'
+                });
+            });
+        }
+        
+        return files;
+    }
 }
 
-// Initialize WireGuard module
-document.addEventListener('DOMContentLoaded', () => {
-    window.wireGuardConfig = new WireGuardConfig();
-});
+// Create global instance
+window.WireGuardGenerator = new WireGuardGenerator();
+
+// Export for module systems if needed
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = WireGuardGenerator;
+}
