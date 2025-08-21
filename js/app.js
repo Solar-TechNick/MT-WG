@@ -71,6 +71,25 @@ class WireGuardMikroTikApp {
         this.transferSubnet = document.getElementById('transferSubnet');
         this.sitesContainer = document.getElementById('sitesContainer');
         
+        // LTE elements
+        this.mobileProvider = document.getElementById('mobileProvider');
+        this.apnName = document.getElementById('apnName');
+        this.apnUsername = document.getElementById('apnUsername');
+        this.apnPassword = document.getElementById('apnPassword');
+        this.simPin = document.getElementById('simPin');
+        this.lteInterface = document.getElementById('lteInterface');
+        this.apnProfileName = document.getElementById('apnProfileName');
+        this.authMethod = document.getElementById('authMethod');
+        this.ipType = document.getElementById('ipType');
+        this.enableLteNat = document.getElementById('enableLteNat');
+        this.enableLteFirewall = document.getElementById('enableLteFirewall');
+        this.setDefaultRoute = document.getElementById('setDefaultRoute');
+        this.routeDistance = document.getElementById('routeDistance');
+        this.localLanNetwork = document.getElementById('localLanNetwork');
+        this.generateLteConfig = document.getElementById('generateLteConfig');
+        this.lteScriptOutput = document.getElementById('lteScriptOutput');
+        this.lteOutputSection = document.getElementById('lteOutputSection');
+        
         // RouterOS settings
         this.interfaceName = document.getElementById('interfaceName');
         this.globalPSK = document.getElementById('globalPSK');
@@ -145,6 +164,16 @@ class WireGuardMikroTikApp {
         
         if (this.generateConfig) {
             this.generateConfig.addEventListener('click', () => this.generateConfiguration());
+        }
+        
+        // LTE provider change
+        if (this.mobileProvider) {
+            this.mobileProvider.addEventListener('change', () => this.handleProviderChange());
+        }
+        
+        // LTE configuration generation
+        if (this.generateLteConfig) {
+            this.generateLteConfig.addEventListener('click', () => this.generateLTEConfiguration());
         }
         
         // Output tabs
@@ -715,6 +744,95 @@ class WireGuardMikroTikApp {
                 document.body.removeChild(notification);
             }, 300);
         }, 3000);
+    }
+
+    /**
+     * Handle mobile provider change
+     */
+    handleProviderChange() {
+        const providerId = this.mobileProvider?.value;
+        if (providerId && window.LTEConfigurator) {
+            const elements = {
+                apnName: this.apnName,
+                apnUsername: this.apnUsername,
+                apnPassword: this.apnPassword,
+                authMethod: this.authMethod,
+                ipType: this.ipType,
+                apnProfileName: this.apnProfileName
+            };
+            
+            window.LTEConfigurator.updateProviderSettings(providerId, elements);
+        }
+    }
+
+    /**
+     * Generate LTE configuration
+     */
+    async generateLTEConfiguration() {
+        try {
+            if (!window.LTEConfigurator) {
+                throw new Error('LTE Configurator not available');
+            }
+
+            // Collect LTE configuration data
+            const config = {
+                provider: this.mobileProvider?.value || 'custom',
+                apnName: this.apnName?.value || '',
+                apnUsername: this.apnUsername?.value || '',
+                apnPassword: this.apnPassword?.value || '',
+                simPin: this.simPin?.value || '',
+                lteInterface: this.lteInterface?.value || 'lte1',
+                apnProfileName: this.apnProfileName?.value || 'lte-profile',
+                authMethod: this.authMethod?.value || 'chap',
+                ipType: this.ipType?.value || 'ipv4',
+                enableLteNat: this.enableLteNat?.checked || false,
+                enableLteFirewall: this.enableLteFirewall?.checked || false,
+                setDefaultRoute: this.setDefaultRoute?.checked || false,
+                routeDistance: parseInt(this.routeDistance?.value) || 1,
+                localLanNetwork: this.localLanNetwork?.value || '192.168.1.0/24'
+            };
+
+            // Generate LTE script
+            const result = window.LTEConfigurator.generateLTEConfig(config);
+
+            if (result.success) {
+                // Display the script
+                this.displayLTEScript(result.script);
+                this.showNotification('LTE configuration generated successfully!', 'success');
+            } else {
+                throw new Error(result.error || 'LTE generation failed');
+            }
+
+        } catch (error) {
+            console.error('LTE configuration generation failed:', error);
+            this.showNotification('Failed to generate LTE configuration: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Display LTE script in output section
+     * @param {string} script 
+     */
+    displayLTEScript(script) {
+        if (this.lteScriptOutput) {
+            this.lteScriptOutput.innerHTML = `
+                <div class="config-section">
+                    <div class="config-header">
+                        <h4>MikroTik RouterOS LTE Script</h4>
+                        <button class="copy-btn" onclick="app.copyToClipboard('LTE Script', \`${script.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">Copy</button>
+                    </div>
+                    <div class="config-content">
+                        <pre>${script}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show LTE output section
+        if (this.lteOutputSection) {
+            this.lteOutputSection.classList.remove('hidden');
+            this.lteOutputSection.scrollIntoView({ behavior: 'smooth' });
+        }
     }
 }
 
