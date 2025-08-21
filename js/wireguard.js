@@ -154,10 +154,26 @@ class WireGuardGenerator {
         for (let i = 0; i < data.clients.length; i++) {
             const client = data.clients[i];
             
+            // Generate client keys if they don't exist or are empty
+            let clientPrivateKey = client.privateKey;
+            let clientPublicKey = client.publicKey;
+            let clientPSK = client.psk;
+            
+            if (!clientPrivateKey || clientPrivateKey.trim() === '') {
+                console.log(`Generating keys for ${client.name}`);
+                const keys = await window.WireGuardCrypto.generateKeyPair();
+                clientPrivateKey = keys.privateKey;
+                clientPublicKey = keys.publicKey;
+            }
+            
+            if (client.psk !== null && (!clientPSK || clientPSK.trim() === '')) {
+                clientPSK = await window.WireGuardCrypto.generatePreSharedKey();
+            }
+            
             const config = {
                 name: client.name || `Client-${i + 1}`,
                 interface: {
-                    privateKey: client.privateKey,
+                    privateKey: clientPrivateKey,
                     address: client.ip,
                     dns: data.dns || [],
                     mtu: data.interface?.mtu || 1420
@@ -171,8 +187,8 @@ class WireGuardGenerator {
                 }
             };
             
-            if (client.psk) {
-                config.peer.preSharedKey = client.psk;
+            if (clientPSK) {
+                config.peer.preSharedKey = clientPSK;
             }
             
             configs.push(config);
