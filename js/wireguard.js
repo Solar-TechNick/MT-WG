@@ -167,7 +167,7 @@ class WireGuardGenerator {
             }
             
             if (client.psk !== null && (!clientPSK || clientPSK.trim() === '')) {
-                clientPSK = await window.WireGuardCrypto.generatePreSharedKey();
+                clientPSK = await window.WireGuardCrypto.generatePresharedKey();
             }
             
             const config = {
