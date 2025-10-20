@@ -37,6 +37,45 @@
         <main>
             <!-- WireGuard VPN Page -->
             <div class="page-content active" id="wireguard-page">
+                <!-- Import Configuration Section -->
+                <div class="section import-section">
+                    <h2>📥 Import Configuration</h2>
+                    <p class="section-description">Import existing WireGuard or MikroTik RouterOS configuration to pre-fill the form</p>
+
+                    <div class="import-controls">
+                        <div class="import-buttons">
+                            <label class="btn btn-secondary" for="configFileInput">
+                                📁 Upload Config File
+                                <input type="file" id="configFileInput" accept=".conf,.rsc,.txt" hidden>
+                            </label>
+                            <button type="button" id="showPasteArea" class="btn btn-secondary">
+                                📋 Paste Configuration
+                            </button>
+                            <button type="button" id="clearImport" class="btn btn-danger hidden">
+                                🗑️ Clear Import
+                            </button>
+                        </div>
+
+                        <div id="pasteArea" class="paste-area hidden">
+                            <label for="configTextInput">Paste your configuration here:</label>
+                            <textarea id="configTextInput" rows="10" placeholder="Paste WireGuard .conf or MikroTik .rsc configuration..."></textarea>
+                            <div class="paste-actions">
+                                <button type="button" id="importFromPaste" class="btn btn-primary">Import</button>
+                                <button type="button" id="cancelPaste" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div id="importPreview" class="import-preview hidden">
+                            <h4>Import Preview:</h4>
+                            <pre id="importPreviewText"></pre>
+                            <div class="import-preview-actions">
+                                <button type="button" id="applyImport" class="btn btn-primary">Apply to Form</button>
+                                <button type="button" id="discardImport" class="btn btn-secondary">Discard</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="config-selector">
                     <h2>Configuration Type</h2>
                     <div class="radio-group">
@@ -567,6 +606,7 @@
     <!-- Application Scripts -->
     <script src="js/utils.js"></script>
     <script src="js/crypto.js"></script>
+    <script src="js/import-parser.js"></script>
     <script src="js/wireguard.js"></script>
     <script src="js/vyos.js"></script>
     <script src="js/opnsense.js"></script>

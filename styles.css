@@ -754,3 +754,160 @@ textarea:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
 }
+
+/* ==================== Import Configuration Styles ==================== */
+
+.import-section {
+  background: linear-gradient(135deg, var(--secondary-bg) 0%, var(--tertiary-bg) 100%);
+  border: 2px solid var(--accent-blue);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.import-section h2 {
+  color: var(--accent-blue-light);
+  margin-bottom: var(--spacing-sm);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.section-description {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-lg);
+  font-size: 0.95rem;
+}
+
+.import-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.import-buttons {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.import-buttons .btn {
+  cursor: pointer;
+}
+
+.import-buttons label.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.paste-area {
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.paste-area label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.paste-area textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: var(--spacing-md);
+  background: var(--primary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.paste-area textarea:focus {
+  border-color: var(--accent-blue);
+  outline: none;
+}
+
+.paste-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+.import-preview {
+  background: var(--surface-bg);
+  border: 1px solid var(--accent-blue);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.import-preview h4 {
+  color: var(--accent-blue-light);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.import-preview pre {
+  background: var(--primary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-lg);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.import-preview-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Responsive adjustments for import section */
+@media (max-width: 768px) {
+  .import-buttons {
+    flex-direction: column;
+  }
+
+  .import-buttons .btn {
+    width: 100%;
+  }
+
+  .paste-actions,
+  .import-preview-actions {
+    flex-direction: column;
+  }
+
+  .paste-actions .btn,
+  .import-preview-actions .btn {
+    width: 100%;
+  }
+}

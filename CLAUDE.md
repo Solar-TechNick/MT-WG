@@ -2,274 +2,199 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## RULES !!!!
-Don't assume!! ALWAYS ASK QUESTIONS!!!
+## Critical Rule
+
+**DON'T ASSUME - ALWAYS ASK QUESTIONS BEFORE IMPLEMENTING**
 
 ## Project Overview
 
-This is a comprehensive web-based WireGuard VPN and LTE mobile configuration generator optimized for **multiple router platforms**. The project generates professional-grade configurations with enterprise features and modern user interfaces for **MikroTik RouterOS**, **VyOS**, and **OPNsense**.
+Multi-platform WireGuard VPN and LTE mobile configuration generator. Pure client-side static web application (~5600 lines) generating professional configurations for **MikroTik RouterOS**, **VyOS**, and **OPNsense** with QR codes for mobile clients.
 
-## Current Implementation Status
+**Status**: Production-ready. Repository: https://github.com/Solar-TechNick/MT-WG
 
-**✅ FULLY IMPLEMENTED** - Complete working application with advanced multi-platform features deployed at: https://github.com/Solar-TechNick/MT-WG
+## Running & Testing
 
-## Core Features
+```bash
+# No build step - pure static HTML/JS/CSS
+# Requires HTTPS or localhost for WebCrypto API
 
-### Multi-Platform WireGuard Configuration Generator
-- **Platforms Supported**: MikroTik RouterOS, VyOS, OPNsense (4 total output formats)
-- **Configuration Types**: Client-server and site-to-site VPN setups
-- **Security**: Secure Curve25519 key generation using WebCrypto API with fallback
-- **Networking**: Automatic IP subnet calculation and allocation
-- **Mobile Support**: QR code generation for mobile client import with working display
-- **Output Options**: Simultaneous generation for all platforms
+python3 -m http.server 8080
+# Then visit: http://localhost:8080
 
-### Platform-Specific Features
+# Manual testing
+open test-crypto.html    # Test key generation
+```
 
-#### MikroTik RouterOS
-- Complete RouterOS script generation with firewall and NAT
-- Support for routing tables and interface configuration
-- Advanced firewall rules with security hardening
-- LTE mobile configuration with German provider database
-
-#### VyOS Configuration - **NEW**
-- Full configuration session: `configure → set commands → commit → save`
-- Modern IPv4 firewall syntax (VyOS 1.5.x compatible)
-- NAT configuration with masquerading support
-- Static routing for site-to-site configurations
-- Automatic keypair generation commands
-
-#### OPNsense Configuration - **NEW**
-- Multi-format output: Web GUI steps + CLI commands + XML snippets
-- Step-by-step web interface configuration guide
-- Complete firewall and NAT rule setup instructions
-- Plugin installation prerequisites and setup
-- Client configuration file generation
-
-### Advanced WireGuard Features
-- **DNS Configuration**: Customizable DNS servers with LTE DNS toggle
-- **IPv6 Support**: Dual-stack IPv4/IPv6 configurations
-- **Routing Control**: Custom routing table selection for RouterOS
-- **Allowed IPs**: Configurable traffic routing per client
-- **File Management**: Downloads for all platforms (.conf, .rsc, .txt, .zip, .pdf)
-
-### Modern User Interface - **REDESIGNED**
-- **Dark Corporate Theme**: Professional dark navy theme with blue accents
-- **Light/Dark Toggle**: Theme switching with localStorage persistence
-- **4-Tab Output Structure**: WireGuard & QR | MikroTik | VyOS | OPNsense
-- **Responsive Design**: Mobile-optimized with modern CSS variables
-- **Professional Typography**: Consistent spacing and visual hierarchy
-
-### Enhanced Download & Export Features
-- **PDF Downloads**: Complete multi-platform PDF with all configurations
-- **QR Code ZIP**: Download QR codes as images + config files
-- **Copy All**: Clipboard copy of all platform configurations
-- **Individual Copy**: Per-section copy buttons for each platform
-
-### LTE Mobile Configuration
-- **Provider Database**: 18+ German mobile providers (Telekom, Vodafone, O2, etc.)
-- **Auto-Configuration**: Provider selection auto-fills APN settings
-- **DNS Configuration**: Toggle for DNS server configuration
-- **Complete Scripts**: RouterOS scripts with SIM PIN, APN, routing, NAT, firewall
+**No automated tests exist** - all testing is manual.
 
 ## File Structure
 
 ```
 /
-├── index.html              # Main application with modern 4-tab interface
-├── index-old.html          # Legacy version (backup)
-├── styles.css              # Modern dark corporate theme with CSS variables
-├── components/             # Modular HTML components
-│   ├── wireguard-form.html # WireGuard configuration form component
-│   └── lte-form.html       # LTE configuration form component
-├── js/
-│   ├── app.js              # Main application with download functionality
-│   ├── wireguard.js        # WireGuard + multi-platform generation
-│   ├── vyos.js             # VyOS configuration generator - NEW
-│   ├── opnsense.js         # OPNsense configuration generator - NEW
-│   ├── lte.js              # LTE provider database and generation
-│   ├── crypto.js           # WebCrypto API implementation with fallbacks
-│   └── utils.js            # Utility functions and validation
-├── demo/                   # Working reference implementation
-│   ├── index.html          # Demo with proven functionality
-│   ├── script.js           # Working crypto implementation source
-│   ├── qr-offline.js       # QR code implementation source
-│   └── qr-test.html        # QR code testing page
-├── test-crypto.html        # Crypto functionality testing page
-├── CLAUDE.md               # This file
-├── README.md               # User documentation
-├── INSTALL.md              # Installation and usage guide
-└── ToDo.md                 # Original project requirements
+├── index.html              # Main single-page app (32k lines, includes forms)
+├── styles.css              # CSS variables-based theming (dark/light toggle)
+├── components/             # HTML form components (loaded dynamically)
+│   ├── wireguard-form.html
+│   └── lte-form.html
+└── js/
+    ├── app.js              # Main controller, event handling, UI orchestration
+    ├── wireguard.js        # Core WireGuard + multi-platform orchestrator
+    ├── vyos.js             # VyOS configuration generator
+    ├── opnsense.js         # OPNsense multi-format config generator
+    ├── lte.js              # German LTE provider database (18+ providers)
+    ├── crypto.js           # Curve25519 key generation (WebCrypto + fallback)
+    ├── import-parser.js    # Config import parser (WireGuard & MikroTik)
+    ├── qrcode.js           # QR code generation (primary)
+    ├── qr-offline.js       # QR code fallback
+    └── utils.js            # Validation, downloads, network calculations
 ```
 
-## Technical Architecture
+## Architecture
 
-### Multi-Platform Generation System - **NEW**
-- **Modular Generators**: Separate modules for each platform (MikroTik, VyOS, OPNsense)
-- **Unified Workflow**: Single configuration generates all platform outputs
-- **Research-Based**: Implementation based on official platform documentation
-- **Error Handling**: Graceful fallbacks with manual setup notes
+### Component Communication Flow
 
-### Modern UI Architecture - **REDESIGNED**
-- **CSS Variables**: Dark/light theme system with custom properties
-- **4-Tab Layout**: Combined WireGuard & QR tab + 3 platform-specific tabs
-- **Professional Design**: Corporate dark navy theme with blue accents
-- **Responsive Grid**: Mobile-first design with flexible layouts
+```
+User Input (index.html forms)
+    ↓
+WireGuardMikroTikApp (app.js) - Event listeners, validation
+    ↓
+WireGuardGenerator.generate(data) - Central orchestrator
+    ↓ ↓ ↓
+    ├→ MikroTik Script Generation (wireguard.js)
+    ├→ VyOSGenerator.generate(data) (vyos.js)
+    └→ OPNsenseGenerator.generate(data) (opnsense.js)
+    ↓
+4-Tab UI Display: WireGuard & QR | MikroTik | VyOS | OPNsense
+```
 
-### Key Generation (`js/crypto.js`) - **ENHANCED**
-- **WebCrypto Implementation**: X25519 key derivation with proper clamping
-- **Fallback Support**: Math.random fallback for unsupported environments
-- **Pre-shared Keys**: Secure PSK generation for additional security
-- **Key Validation**: WireGuard format compliance checking
+**Critical Pattern**: All platform generators are **global singletons** initialized at page load:
+- `window.VyOSGenerator = new VyOSGenerator();` ([vyos.js:395](js/vyos.js#L395))
+- `window.OPNsenseGenerator = new OPNsenseGenerator();` ([opnsense.js:484](js/opnsense.js#L484))
+- `window.WireGuardGenerator = new WireGuardGenerator();` ([wireguard.js:580](js/wireguard.js#L580))
 
-### QR Code Generation - **FIXED**
-- **Working Display**: QRCodeWrapper implementation for proper rendering
-- **Offline Support**: Multiple fallback systems for QR generation
-- **Canvas Rendering**: Real QR patterns with proper finder markers
-- **Mobile Compatibility**: Scannable codes for WireGuard mobile apps
+### Multi-Platform Generation ([wireguard.js:56-95](js/wireguard.js#L56-L95))
 
-### Download & Export System - **NEW**
-- **PDF Generation**: jsPDF-based multi-platform PDF creation
-- **ZIP Downloads**: JSZip for QR code + config file packages
-- **Clipboard Integration**: Copy all configurations functionality
-- **File Naming**: Professional naming conventions with dates
+Single configuration data object generates all platform outputs simultaneously:
 
-## Platform-Specific Implementation
+```javascript
+async generateClientServerConfigs(data) {
+    // Base WireGuard configs
+    const serverConfig = this.createServerConfig(data);
+    const clientConfigs = await this.createClientConfigs(data);
+    const mikrotikScript = this.createMikroTikClientServerScript(...);
 
-### VyOS Generator (`js/vyos.js`) - **NEW**
-- **Configuration Session**: Full commit/save workflow implementation
-- **Modern Firewall**: IPv4 firewall with state policy (VyOS 1.5.x syntax)
-- **NAT Configuration**: Source NAT with masquerading rules
-- **Site-to-Site**: Static routing and peer configuration
-- **Best Practices**: Research-verified command syntax
+    // Conditional platform generation
+    let vyosConfigs = window.VyOSGenerator ?
+        window.VyOSGenerator.generate(data) : [];
+    let opnsenseConfigs = window.OPNsenseGenerator ?
+        window.OPNsenseGenerator.generate(data) : [];
 
-### OPNsense Generator (`js/opnsense.js`) - **NEW**
-- **Multi-Format Output**: Web GUI + CLI + XML configuration
-- **Step-by-Step Guide**: Complete web interface setup instructions
-- **Prerequisites**: Plugin installation and setup requirements
-- **XML Configuration**: Proper OPNsense config.xml structure
-- **Client Files**: Generated WireGuard client configuration files
+    return { wireguard, mikrotik, vyos, opnsense, qrCodes };
+}
+```
 
-## Development Guidelines
+### Configuration Data Schema
 
-### Code Conventions
-- Use modern ES6+ features and WebCrypto API
-- Follow modular architecture with separated concerns
-- Maintain professional dark theme consistency
-- Always ask questions before implementing changes
+All generators receive the same input structure:
 
-### Feature Implementation
-- All platform commands validated against official documentation
-- Implement proper error handling with user-friendly messages
-- Use research-based approach for new platform support
-- Test configurations for security best practices
+```javascript
+{
+    type: 'client-server' | 'site-to-site',
+    server: {
+        name: string,
+        ip: string,        // CIDR: "10.0.0.1/24"
+        port: number,
+        endpoint: string,  // domain:port or ip:port
+        keys: { privateKey: string, publicKey: string }
+    },
+    clients: [{ name, ip, publicKey, privateKey, psk? }],  // client-server
+    sites: [{ name, ip, localNetwork, endpoint, keys }],   // site-to-site
+    interface: { name, mtu?, keepalive? },
+    routing: { enableNat, enableFirewall, localNetwork?, routingTable? }
+}
+```
 
-### Security Considerations
-- Client-side key generation only (no server transmission)
-- Secure random number generation for all cryptographic operations
-- Input validation for all user-provided data
-- No sensitive information in generated logs
+### Key Generation ([crypto.js](js/crypto.js))
 
-## Recent Major Updates - **2024 Latest**
+1. **WebCrypto API** (primary): `crypto.getRandomValues()` → Curve25519 clamping → Base64
+2. **Fallback**: Math.random() if unavailable (development only, warns user)
+3. **Clamping**: `key[0] &= 248; key[31] &= 127; key[31] |= 64;`
+4. **Public Key Derivation**: Simplified implementation - see [crypto.js:58-63](js/crypto.js#L58-L63) for production notes
 
-### ✅ **Multi-Platform Implementation - COMPLETED**
-1. **VyOS Support**: Complete VyOS configuration with commit/save session
-2. **OPNsense Support**: Multi-format output with GUI steps, CLI, and XML
-3. **4-Tab Interface**: Redesigned output structure combining WireGuard & QR
-4. **Research-Based**: Implementation following official platform documentation
+**Security**: WebCrypto requires HTTPS or localhost. Browser support: Chrome 67+, Firefox 78+, Safari 14+, Edge 79+
 
-### ✅ **Modern UI Redesign - COMPLETED**
-1. **Corporate Theme**: Professional dark navy theme with blue accents
-2. **Theme Toggle**: Light/dark mode switching with persistence
-3. **Responsive Design**: Mobile-optimized with CSS variables
-4. **Professional Typography**: Consistent design system
+## Platform Implementation Details
 
-### ✅ **Enhanced Functionality - COMPLETED**
-1. **Working QR Codes**: Fixed display with QRCodeWrapper implementation
-2. **PDF Downloads**: Multi-platform PDF generation with jsPDF
-3. **Download System**: ZIP downloads, copy all, individual copy buttons
-4. **DNS Configuration**: LTE DNS toggle and configuration
+### VyOS ([vyos.js](js/vyos.js))
+- **Syntax**: VyOS 1.5.x (modern IPv4 firewall with state policy)
+- **Session Structure**: `configure` → set commands → `commit` → `save`
+- **Key Management**: `generate wireguard named-keypairs <name>`
+- **Firewall**: Creates `WG_IN` and `WG_LOCAL` rulesets with state tracking
+- **NAT**: Source NAT with masquerading
 
-### 🔧 **Architecture Improvements - COMPLETED**
-- **Modular Generators**: Separate VyOS and OPNsense modules
-- **Unified Workflow**: Single configuration generates all platforms
-- **Error Handling**: Graceful fallbacks with manual setup notes
-- **Professional Output**: Consistent formatting across all platforms
+### OPNsense ([opnsense.js](js/opnsense.js))
+- **Multi-Format Output**: Web GUI steps + CLI commands + XML snippets
+- **Prerequisites**: Requires `os-wireguard` plugin (System > Firmware > Plugins)
+- **Structure**: VPN > WireGuard > Instances + Peers + Firewall
+- **Client Configs**: Standard WireGuard `.conf` files
 
-## Current Branch Structure
+### MikroTik RouterOS ([wireguard.js](js/wireguard.js))
+- **Format**: `.rsc` scripts with `/interface wireguard` commands
+- **Features**: Address-lists, filter rules, NAT masquerade, routing tables
 
-- **main**: Production-ready version with multi-platform support
-- **feature/modern-redesign**: ✅ MERGED - Complete redesign with VyOS/OPNsense
+### LTE Configuration ([lte.js](js/lte.js))
+- **Database**: 18+ German providers with accurate APN settings
+- **Networks**: Telekom (6 variants), Vodafone (5), O2 (7)
+- **Fields**: APN, auth (PAP/CHAP), IP type (ipv4/ipv6/dual), DNS toggle
 
-## Key Functions Reference
+## UI/UX Architecture
 
-### Multi-Platform Generation (`js/wireguard.js:56-95, 102-131`) - **NEW**
-- `generateClientServerConfigs()`: Generates all platform configurations
-- `generateSiteToSiteConfigs()`: Multi-platform site-to-site setup
-- VyOS and OPNsense integration with error handling
+### Theme System ([styles.css](styles.css) + [app.js:564-592](js/app.js#L564-L592))
+- **CSS Variables**: `--bg-color`, `--text-color`, `--accent-color`
+- **Toggle**: `<html data-theme="dark|light">`
+- **Persistence**: `localStorage.getItem('theme')`
+- **Theme**: Dark navy (#0a192f) with blue accents (#64ffda)
 
-### VyOS Configuration (`js/vyos.js`) - **NEW**
-- `generate()`: Main VyOS configuration generator
-- `createServerConfig()`: Client-server setup with full session
-- `createSiteConfig()`: Site-to-site configuration
-- `generateFirewallRules()`: Modern IPv4 firewall syntax
-- `generateNATRules()`: Source NAT configuration
+### Download System ([app.js:888-1194](js/app.js#L888-L1194))
+- **PDF**: jsPDF library, multi-platform PDF generation
+- **ZIP**: JSZip library, QR codes + config files
+- **Clipboard**: Individual + "Copy All Configurations"
+- **Naming**: `WireGuard-{ServerName}-{YYYYMMDD-HHMMSS}.{ext}`
 
-### OPNsense Configuration (`js/opnsense.js`) - **NEW**
-- `generate()`: Main OPNsense configuration generator
-- `createServerConfig()`: Multi-format server setup
-- `createSiteConfig()`: Site-to-site configuration
-- `generateServerXMLConfig()`: XML configuration snippets
+### QR Code System ([qrcode.js](js/qrcode.js) + [qr-offline.js](js/qr-offline.js))
+- Two-tier fallback: QRCodeGenerator → SimpleQRCode
+- Standard WireGuard mobile config format
+- Previous rendering issues fixed by QRCodeWrapper implementation
 
-### Modern UI Management (`js/app.js:564-592`) - **ENHANCED**
-- `displayConfigurations()`: 4-platform output display
-- `formatVyOSOutput()`: VyOS configuration formatting
-- `formatOPNsenseOutput()`: OPNsense configuration formatting
-- Theme switching and persistence
+### Configuration Import System ([import-parser.js](js/import-parser.js) + [app.js:1305-1491](js/app.js#L1305-L1491))
+- **Formats Supported**: WireGuard `.conf` files, MikroTik `.rsc` scripts
+- **Import Methods**: File upload or paste text
+- **Workflow**: Parse → Preview → Apply to form fields
+- **Detection**: Auto-detects format via regex patterns
+- **Parsing**: Extracts server config, peers, interface settings, routing flags
+- **Application**: Pre-fills form fields, enables manual key input if keys found
+- **UI**: Import section at top of WireGuard page with preview/discard options
 
-### Download System (`js/app.js:888-984, 1011-1194`) - **NEW**
-- `copyAllConfigurations()`: Multi-platform clipboard copy
-- `downloadQRCodes()`: ZIP download with images + configs
-- `downloadAsPDF()`: Complete PDF generation with all platforms
-- JSZip and jsPDF integration
+## Adding New Router Platforms
 
-### Crypto Functions (`js/crypto.js`) - **ENHANCED**
-- `generateKeyPair()`: Working WireGuard key generation
-- `generatePresharedKey()`: PSK generation for additional security
-- `validateKey()`: WireGuard format compliance
-- WebCrypto with fallback support
+1. Create `js/<platform>.js` with class implementing `generate(data)` method
+2. Return array of `{name: string, content: string}` objects
+3. Register global singleton: `window.<Platform>Generator = new <Platform>Generator();`
+4. Add conditional calls in [wireguard.js:56-95](js/wireguard.js#L56-L95) and [wireguard.js:102-131](js/wireguard.js#L102-L131)
+5. Add output tab in [index.html](index.html) and display logic in [app.js](js/app.js) `displayConfigurations()`
 
-## Deployment Notes
+## Known Limitations
 
-- **Static files only** - no server requirements
-- **Modern browser** with WebCrypto API support (fallback included)
-- **All processing client-side** for maximum security
-- **Multi-platform output** - supports 4 different router platforms
-- **Professional grade** suitable for enterprise deployment
-- **Research-verified** configurations following official documentation
+1. **No automated tests** - manual testing only
+2. **Public key derivation** - simplified implementation ([crypto.js:58-63](js/crypto.js#L58-L63))
+3. **No backend** - 100% client-side, no persistence
+4. **QR size limits** - large configs may exceed capacity
+5. **Command validation** - verified against docs but not live-tested
 
-## Testing & Validation
+## Documentation
 
-### Platform Testing
-- **VyOS Commands**: Validated against VyOS 1.5.x documentation
-- **OPNsense Configuration**: Tested multi-format output structure
-- **MikroTik Scripts**: RouterOS command validation
-- **Cross-Platform**: Consistent configuration across all platforms
-
-### UI/UX Testing
-- **Theme Switching**: Light/dark mode persistence
-- **Responsive Design**: Mobile and desktop optimization
-- **Download Functionality**: PDF, ZIP, and copy operations
-- **QR Code Display**: Working QR code generation and display
-
-## Project Status: ✅ **PRODUCTION READY - MULTI-PLATFORM**
-
-All major functionality implemented and tested:
-- ✅ Multi-platform support (MikroTik, VyOS, OPNsense)
-- ✅ Modern dark corporate theme with light/dark toggle
-- ✅ Working QR code generation and display
-- ✅ Complete download system (PDF, ZIP, copy all)
-- ✅ Research-based platform configurations
-- ✅ Professional 4-tab interface
-- ✅ Enhanced LTE configuration with DNS support
-- ✅ Full client-server and site-to-site support
-- ✅ Enterprise-grade security and validation
+- **MikroTik**: https://help.mikrotik.com/docs/display/ROS/WireGuard
+- **VyOS 1.5.x**: https://docs.vyos.io/en/latest/configuration/interfaces/wireguard.html
+- **OPNsense**: https://docs.opnsense.org/manual/vpnet.html#wireguard
+- **WireGuard**: https://www.wireguard.com/protocol/
+- **Curve25519**: https://cr.yp.to/ecdh.html

@@ -120,6 +120,22 @@ class WireGuardMikroTikApp {
         this.vyosOutput = document.getElementById('vyosOutput');
         this.opnsenseOutput = document.getElementById('opnsenseOutput');
         this.qrOutput = document.getElementById('qrOutput');
+
+        // Import elements
+        this.configFileInput = document.getElementById('configFileInput');
+        this.showPasteArea = document.getElementById('showPasteArea');
+        this.clearImport = document.getElementById('clearImport');
+        this.pasteArea = document.getElementById('pasteArea');
+        this.configTextInput = document.getElementById('configTextInput');
+        this.importFromPaste = document.getElementById('importFromPaste');
+        this.cancelPaste = document.getElementById('cancelPaste');
+        this.importPreview = document.getElementById('importPreview');
+        this.importPreviewText = document.getElementById('importPreviewText');
+        this.applyImport = document.getElementById('applyImport');
+        this.discardImport = document.getElementById('discardImport');
+
+        // Store imported data
+        this.importedData = null;
     }
 
     attachEventListeners() {
@@ -171,7 +187,30 @@ class WireGuardMikroTikApp {
         if (this.generateConfig) {
             this.generateConfig.addEventListener('click', () => this.generateConfiguration());
         }
-        
+
+        // Import event listeners
+        if (this.configFileInput) {
+            this.configFileInput.addEventListener('change', (e) => this.handleFileImport(e));
+        }
+        if (this.showPasteArea) {
+            this.showPasteArea.addEventListener('click', () => this.showPasteTextArea());
+        }
+        if (this.importFromPaste) {
+            this.importFromPaste.addEventListener('click', () => this.handleTextImport());
+        }
+        if (this.cancelPaste) {
+            this.cancelPaste.addEventListener('click', () => this.hidePasteTextArea());
+        }
+        if (this.applyImport) {
+            this.applyImport.addEventListener('click', () => this.applyImportedData());
+        }
+        if (this.discardImport) {
+            this.discardImport.addEventListener('click', () => this.discardImportedData());
+        }
+        if (this.clearImport) {
+            this.clearImport.addEventListener('click', () => this.clearAllImport());
+        }
+
         // LTE provider change
         if (this.mobileProvider) {
             this.mobileProvider.addEventListener('change', () => this.handleProviderChange());
@@ -1262,6 +1301,193 @@ class WireGuardMikroTikApp {
         URL.revokeObjectURL(url);
         
         this.showNotification('Configurations downloaded as text file!', 'success');
+    }
+    // ==================== Import Configuration Methods ====================
+
+    /**
+     * Handle file upload import
+     */
+    async handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            this.processImportText(text);
+        } catch (error) {
+            console.error('File import error:', error);
+            alert('Error reading file: ' + error.message);
+        }
+
+        // Reset file input
+        event.target.value = '';
+    }
+
+    /**
+     * Show paste text area
+     */
+    showPasteTextArea() {
+        this.pasteArea.classList.remove('hidden');
+        this.configTextInput.value = '';
+        this.configTextInput.focus();
+    }
+
+    /**
+     * Hide paste text area
+     */
+    hidePasteTextArea() {
+        this.pasteArea.classList.add('hidden');
+        this.configTextInput.value = '';
+    }
+
+    /**
+     * Handle text paste import
+     */
+    handleTextImport() {
+        const text = this.configTextInput.value.trim();
+        if (!text) {
+            alert('Please paste a configuration first');
+            return;
+        }
+
+        this.processImportText(text);
+        this.hidePasteTextArea();
+    }
+
+    /**
+     * Process imported configuration text
+     */
+    processImportText(text) {
+        try {
+            // Parse configuration
+            this.importedData = window.ConfigImportParser.parse(text);
+
+            // Generate preview
+            const preview = window.ConfigImportParser.generatePreview(this.importedData);
+            this.importPreviewText.textContent = preview;
+
+            // Show preview
+            this.importPreview.classList.remove('hidden');
+            this.clearImport.classList.remove('hidden');
+
+            console.log('Imported configuration:', this.importedData);
+        } catch (error) {
+            console.error('Import parsing error:', error);
+            alert('Failed to parse configuration:\n' + error.message);
+            this.importedData = null;
+        }
+    }
+
+    /**
+     * Apply imported data to form
+     */
+    applyImportedData() {
+        if (!this.importedData) {
+            alert('No imported data to apply');
+            return;
+        }
+
+        try {
+            const data = this.importedData;
+
+            // Set configuration type
+            if (data.type) {
+                const typeRadio = document.querySelector(`input[name="configType"][value="${data.type}"]`);
+                if (typeRadio) {
+                    typeRadio.checked = true;
+                    this.toggleConfigType();
+                }
+            }
+
+            // Apply server configuration
+            if (data.server) {
+                if (data.server.name) this.serverName.value = data.server.name;
+                if (data.server.ip) this.serverIP.value = data.server.ip;
+                if (data.server.port) this.listenPort.value = data.server.port;
+
+                // Apply server keys if manual key input is enabled
+                if (data.server.keys && data.server.keys.privateKey) {
+                    // Enable manual key input
+                    if (this.serverKeysManual.classList.contains('hidden')) {
+                        this.toggleServerKeys.click();
+                    }
+                    this.serverPrivateKey.value = data.server.keys.privateKey;
+                    if (data.server.keys.publicKey) {
+                        this.serverPublicKey.value = data.server.keys.publicKey;
+                    }
+                }
+            }
+
+            // Apply interface settings
+            if (data.interface) {
+                if (data.interface.name) this.interfaceName.value = data.interface.name;
+                if (data.interface.mtu) this.mtu.value = data.interface.mtu;
+                if (data.interface.dns) this.dnsServers.value = data.interface.dns;
+            }
+
+            // Apply routing settings
+            if (data.routing) {
+                if (data.routing.enableNat !== undefined) {
+                    this.enableNAT.checked = data.routing.enableNat;
+                }
+                if (data.routing.enableFirewall !== undefined) {
+                    this.generateFirewall.checked = data.routing.enableFirewall;
+                }
+                if (data.routing.localNetwork) {
+                    this.localNetwork.value = data.routing.localNetwork;
+                }
+            }
+
+            // Apply peers data (for reference - detailed client management would need more work)
+            if (data.peers && data.peers.length > 0) {
+                const firstPeer = data.peers[0];
+                if (firstPeer.endpoint) {
+                    // Extract endpoint for client configs if server import
+                    if (!this.publicEndpoint.value) {
+                        this.publicEndpoint.value = firstPeer.endpoint;
+                    }
+                }
+                if (firstPeer.allowedIPs) {
+                    this.allowedIPs.value = firstPeer.allowedIPs;
+                }
+                if (firstPeer.keepalive) {
+                    this.keepalive.value = firstPeer.keepalive;
+                }
+            }
+
+            alert(`Successfully imported ${data.format.toUpperCase()} configuration!\nReview the form and generate new configs.`);
+
+            // Hide preview
+            this.importPreview.classList.add('hidden');
+
+            // Scroll to top of form
+            document.getElementById('server-config').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        } catch (error) {
+            console.error('Error applying import:', error);
+            alert('Error applying imported data: ' + error.message);
+        }
+    }
+
+    /**
+     * Discard imported data
+     */
+    discardImportedData() {
+        this.importedData = null;
+        this.importPreview.classList.add('hidden');
+        this.importPreviewText.textContent = '';
+    }
+
+    /**
+     * Clear all import data and UI
+     */
+    clearAllImport() {
+        this.importedData = null;
+        this.importPreview.classList.add('hidden');
+        this.importPreviewText.textContent = '';
+        this.pasteArea.classList.add('hidden');
+        this.configTextInput.value = '';
+        this.clearImport.classList.add('hidden');
     }
 }
 
