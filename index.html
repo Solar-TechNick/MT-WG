@@ -349,10 +349,19 @@
                     <!-- Mobile Provider Settings -->
                     <div class="section">
                         <h3>Mobile Provider Settings</h3>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="mobileProvider">Mobile Provider</label>
-                                <select id="mobileProvider">
+                        <p class="section-description">Configure one or more APN profiles for failover or multiple SIM cards</p>
+
+                        <div id="lteProvidersContainer">
+                            <!-- Primary Provider (Provider 1) -->
+                            <div class="lte-provider-card" data-provider-index="0">
+                                <div class="provider-card-header">
+                                    <h4>Provider 1 (Primary)</h4>
+                                </div>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="mobileProvider-0">Mobile Provider</label>
+                                        <select id="mobileProvider-0" class="mobileProvider" data-provider-index="0">
                                     <option value="custom">Custom Configuration</option>
                                     <optgroup label="Deutsche Telekom Network">
                                         <option value="telekom">Deutsche Telekom (Main)</option>
@@ -377,26 +386,45 @@
                                         <option value="drillisch">Drillisch (winSIM, PremiumSIM)</option>
                                         <option value="freenet">freenet Mobile</option>
                                     </optgroup>
-                                </select>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="apnName-0">APN Name</label>
+                                        <input type="text" id="apnName-0" class="apnName" data-provider-index="0" placeholder="Automatically filled from provider">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="apnUsername-0">Username</label>
+                                        <input type="text" id="apnUsername-0" class="apnUsername" data-provider-index="0" placeholder="Optional - leave empty if not required">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="apnPassword-0">Password</label>
+                                        <input type="text" id="apnPassword-0" class="apnPassword" data-provider-index="0" placeholder="Optional - leave empty if not required">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="apnProfileName-0">Profile Name</label>
+                                        <input type="text" id="apnProfileName-0" class="apnProfileName" data-provider-index="0" placeholder="e.g., telekom-main">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="providerPriority-0">Route Distance (Priority)</label>
+                                        <input type="number" id="providerPriority-0" class="providerPriority" data-provider-index="0" value="1" min="1" max="255">
+                                        <small>Lower = higher priority (1 = primary)</small>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="apnName">APN Name</label>
-                                <input type="text" id="apnName" placeholder="Automatically filled from provider">
-                            </div>
-                            <div class="form-group">
-                                <label for="apnUsername">Username</label>
-                                <input type="text" id="apnUsername" placeholder="Optional - leave empty if not required">
-                            </div>
-                            <div class="form-group">
-                                <label for="apnPassword">Password</label>
-                                <input type="text" id="apnPassword" placeholder="Optional - leave empty if not required">
-                            </div>
+                        </div>
+
+                        <!-- Add Provider Button -->
+                        <div class="add-provider-section">
+                            <button type="button" id="addLteProvider" class="btn btn-secondary">
+                                ➕ Add Another Provider
+                            </button>
+                            <small>Add backup or alternative APN profiles for failover</small>
                         </div>
                     </div>
 
                     <!-- SIM Card Settings -->
                     <div class="section">
-                        <h3>SIM Card Settings</h3>
+                        <h3>SIM Card & Interface Settings</h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="simPin">SIM PIN</label>
@@ -405,10 +433,6 @@
                             <div class="form-group">
                                 <label for="lteInterface">LTE Interface</label>
                                 <input type="text" id="lteInterface" value="lte1" placeholder="e.g., lte1">
-                            </div>
-                            <div class="form-group">
-                                <label for="apnProfileName">APN Profile Name</label>
-                                <input type="text" id="apnProfileName" placeholder="e.g., provider-profile">
                             </div>
                         </div>
                     </div>

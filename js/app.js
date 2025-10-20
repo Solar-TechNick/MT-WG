@@ -73,13 +73,10 @@ class WireGuardMikroTikApp {
         this.sitesContainer = document.getElementById('sitesContainer');
         
         // LTE elements
-        this.mobileProvider = document.getElementById('mobileProvider');
-        this.apnName = document.getElementById('apnName');
-        this.apnUsername = document.getElementById('apnUsername');
-        this.apnPassword = document.getElementById('apnPassword');
+        this.lteProvidersContainer = document.getElementById('lteProvidersContainer');
+        this.addLteProvider = document.getElementById('addLteProvider');
         this.simPin = document.getElementById('simPin');
         this.lteInterface = document.getElementById('lteInterface');
-        this.apnProfileName = document.getElementById('apnProfileName');
         this.authMethod = document.getElementById('authMethod');
         this.ipType = document.getElementById('ipType');
         this.enableLteNat = document.getElementById('enableLteNat');
@@ -93,7 +90,10 @@ class WireGuardMikroTikApp {
         this.generateLteConfig = document.getElementById('generateLteConfig');
         this.lteScriptOutput = document.getElementById('lteScriptOutput');
         this.lteOutputSection = document.getElementById('lteOutputSection');
-        
+
+        // LTE provider counter
+        this.lteProviderCount = 1;
+
         // RouterOS settings
         this.interfaceName = document.getElementById('interfaceName');
         this.globalPSK = document.getElementById('globalPSK');
@@ -211,11 +211,21 @@ class WireGuardMikroTikApp {
             this.clearImport.addEventListener('click', () => this.clearAllImport());
         }
 
-        // LTE provider change
-        if (this.mobileProvider) {
-            this.mobileProvider.addEventListener('change', () => this.handleProviderChange());
+        // LTE add provider button
+        if (this.addLteProvider) {
+            this.addLteProvider.addEventListener('click', () => this.addNewLteProvider());
         }
-        
+
+        // LTE provider change - delegate to handle dynamic providers
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('mobileProvider')) {
+                this.handleProviderChange(e.target);
+            }
+        });
+
+        // Initialize first provider change handler
+        this.initializeLteProviderHandlers();
+
         // LTE configuration generation
         if (this.generateLteConfig) {
             this.generateLteConfig.addEventListener('click', () => this.generateLTEConfiguration());
@@ -862,22 +872,159 @@ class WireGuardMikroTikApp {
         }, 3000);
     }
 
+    // ==================== LTE Multi-Provider Methods ====================
+
     /**
-     * Handle mobile provider change
+     * Initialize LTE provider handlers
      */
-    handleProviderChange() {
-        const providerId = this.mobileProvider?.value;
+    initializeLteProviderHandlers() {
+        // Set up initial provider change handler for provider 0
+        const firstProvider = document.getElementById('mobileProvider-0');
+        if (firstProvider && window.LTEConfigurator) {
+            this.handleProviderChange(firstProvider);
+        }
+    }
+
+    /**
+     * Handle mobile provider change for a specific provider
+     * @param {HTMLElement} selectElement - The provider select element
+     */
+    handleProviderChange(selectElement) {
+        const providerId = selectElement?.value;
+        const providerIndex = selectElement?.dataset.providerIndex;
+
         if (providerId && window.LTEConfigurator) {
             const elements = {
-                apnName: this.apnName,
-                apnUsername: this.apnUsername,
-                apnPassword: this.apnPassword,
+                apnName: document.getElementById(`apnName-${providerIndex}`),
+                apnUsername: document.getElementById(`apnUsername-${providerIndex}`),
+                apnPassword: document.getElementById(`apnPassword-${providerIndex}`),
                 authMethod: this.authMethod,
                 ipType: this.ipType,
-                apnProfileName: this.apnProfileName
+                apnProfileName: document.getElementById(`apnProfileName-${providerIndex}`)
             };
-            
+
             window.LTEConfigurator.updateProviderSettings(providerId, elements);
+        }
+    }
+
+    /**
+     * Add a new LTE provider configuration
+     */
+    addNewLteProvider() {
+        const providerIndex = this.lteProviderCount;
+        const providerCard = this.createProviderCard(providerIndex);
+
+        this.lteProvidersContainer.appendChild(providerCard);
+        this.lteProviderCount++;
+
+        // Scroll to new provider
+        providerCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /**
+     * Create a new provider card element
+     * @param {number} index - Provider index
+     * @returns {HTMLElement} Provider card element
+     */
+    createProviderCard(index) {
+        const card = document.createElement('div');
+        card.className = 'lte-provider-card';
+        card.dataset.providerIndex = index;
+
+        card.innerHTML = `
+            <div class="provider-card-header">
+                <h4>Provider ${index + 1}</h4>
+                <button type="button" class="btn btn-danger btn-small remove-provider" data-provider-index="${index}">
+                    🗑️ Remove
+                </button>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="mobileProvider-${index}">Mobile Provider</label>
+                    <select id="mobileProvider-${index}" class="mobileProvider" data-provider-index="${index}">
+                        ${this.getProviderOptions()}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="apnName-${index}">APN Name</label>
+                    <input type="text" id="apnName-${index}" class="apnName" data-provider-index="${index}" placeholder="Automatically filled from provider">
+                </div>
+                <div class="form-group">
+                    <label for="apnUsername-${index}">Username</label>
+                    <input type="text" id="apnUsername-${index}" class="apnUsername" data-provider-index="${index}" placeholder="Optional - leave empty if not required">
+                </div>
+                <div class="form-group">
+                    <label for="apnPassword-${index}">Password</label>
+                    <input type="text" id="apnPassword-${index}" class="apnPassword" data-provider-index="${index}" placeholder="Optional - leave empty if not required">
+                </div>
+                <div class="form-group">
+                    <label for="apnProfileName-${index}">Profile Name</label>
+                    <input type="text" id="apnProfileName-${index}" class="apnProfileName" data-provider-index="${index}" placeholder="e.g., vodafone-backup">
+                </div>
+                <div class="form-group">
+                    <label for="providerPriority-${index}">Route Distance (Priority)</label>
+                    <input type="number" id="providerPriority-${index}" class="providerPriority" data-provider-index="${index}" value="${index + 1}" min="1" max="255">
+                    <small>Lower = higher priority (${index + 1} = backup)</small>
+                </div>
+            </div>
+        `;
+
+        // Add remove button event listener
+        const removeBtn = card.querySelector('.remove-provider');
+        removeBtn.addEventListener('click', () => this.removeLteProvider(index));
+
+        return card;
+    }
+
+    /**
+     * Get provider options HTML
+     * @returns {string} HTML options string
+     */
+    getProviderOptions() {
+        return `
+            <option value="custom">Custom Configuration</option>
+            <optgroup label="Deutsche Telekom Network">
+                <option value="telekom">Deutsche Telekom (Main)</option>
+                <option value="telekom_alt">Deutsche Telekom (Alternative)</option>
+                <option value="telekom_ipv6">Deutsche Telekom (IPv6 only)</option>
+                <option value="congstar">congstar</option>
+                <option value="mobilcom_debitel_telekom">mobilcom-debitel (Telekom)</option>
+                <option value="klarmobil">klarmobil</option>
+            </optgroup>
+            <optgroup label="Vodafone Network">
+                <option value="vodafone">Vodafone (Standard)</option>
+                <option value="vodafone_gigacube">Vodafone GigaCube</option>
+                <option value="1und1_vodafone">1&1 (Vodafone Network)</option>
+                <option value="otelo">otelo</option>
+                <option value="mobilcom_debitel_vodafone">mobilcom-debitel (Vodafone)</option>
+            </optgroup>
+            <optgroup label="O2 / Telefónica Network">
+                <option value="o2">O2 / Telefónica (Contract)</option>
+                <option value="o2_prepaid">O2 Prepaid</option>
+                <option value="1und1_o2">1&1 (O2 Network - legacy)</option>
+                <option value="aldi_talk">ALDI TALK</option>
+                <option value="drillisch">Drillisch (winSIM, PremiumSIM)</option>
+                <option value="freenet">freenet Mobile</option>
+            </optgroup>
+        `;
+    }
+
+    /**
+     * Remove an LTE provider configuration
+     * @param {number} index - Provider index to remove
+     */
+    removeLteProvider(index) {
+        const card = document.querySelector(`.lte-provider-card[data-provider-index="${index}"]`);
+        if (card) {
+            // Prevent removing the last provider
+            const remainingProviders = document.querySelectorAll('.lte-provider-card').length;
+            if (remainingProviders <= 1) {
+                alert('Cannot remove the last provider. At least one provider is required.');
+                return;
+            }
+
+            card.remove();
         }
     }
 
@@ -903,15 +1050,34 @@ class WireGuardMikroTikApp {
                 throw new Error('LTE Configurator not available');
             }
 
-            // Collect LTE configuration data
+            // Collect all provider configurations
+            const providerCards = document.querySelectorAll('.lte-provider-card');
+            const providers = [];
+
+            providerCards.forEach((card) => {
+                const index = card.dataset.providerIndex;
+                const providerSelect = document.getElementById(`mobileProvider-${index}`);
+                const apnName = document.getElementById(`apnName-${index}`);
+                const apnUsername = document.getElementById(`apnUsername-${index}`);
+                const apnPassword = document.getElementById(`apnPassword-${index}`);
+                const apnProfileName = document.getElementById(`apnProfileName-${index}`);
+                const providerPriority = document.getElementById(`providerPriority-${index}`);
+
+                providers.push({
+                    provider: providerSelect?.value || 'custom',
+                    apnName: apnName?.value || '',
+                    apnUsername: apnUsername?.value || '',
+                    apnPassword: apnPassword?.value || '',
+                    apnProfileName: apnProfileName?.value || `lte-profile-${index}`,
+                    routeDistance: parseInt(providerPriority?.value) || (parseInt(index) + 1)
+                });
+            });
+
+            // Collect global LTE configuration data
             const config = {
-                provider: this.mobileProvider?.value || 'custom',
-                apnName: this.apnName?.value || '',
-                apnUsername: this.apnUsername?.value || '',
-                apnPassword: this.apnPassword?.value || '',
+                providers: providers,  // Multiple providers
                 simPin: this.simPin?.value || '',
                 lteInterface: this.lteInterface?.value || 'lte1',
-                apnProfileName: this.apnProfileName?.value || 'lte-profile',
                 authMethod: this.authMethod?.value || 'chap',
                 ipType: this.ipType?.value || 'ipv4',
                 enableLteNat: this.enableLteNat?.checked || false,
@@ -923,13 +1089,13 @@ class WireGuardMikroTikApp {
                 lteDnsServers: this.lteDnsServers?.value || '8.8.8.8, 1.1.1.1'
             };
 
-            // Generate LTE script
-            const result = window.LTEConfigurator.generateLTEConfig(config);
+            // Generate LTE script with multiple providers
+            const result = window.LTEConfigurator.generateMultiProviderLTEConfig(config);
 
             if (result.success) {
                 // Display the script
                 this.displayLTEScript(result.script);
-                this.showNotification('LTE configuration generated successfully!', 'success');
+                this.showNotification(`LTE configuration generated successfully with ${providers.length} provider(s)!`, 'success');
             } else {
                 throw new Error(result.error || 'LTE generation failed');
             }
@@ -1395,7 +1561,7 @@ class WireGuardMikroTikApp {
                 const typeRadio = document.querySelector(`input[name="configType"][value="${data.type}"]`);
                 if (typeRadio) {
                     typeRadio.checked = true;
-                    this.toggleConfigType();
+                    this.handleConfigTypeChange();
                 }
             }
 

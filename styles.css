@@ -911,3 +911,89 @@ textarea:focus-visible {
     width: 100%;
   }
 }
+
+/* ==================== Multi-Provider LTE Styles ==================== */
+
+#lteProvidersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.lte-provider-card {
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  transition: border-color 0.2s ease;
+}
+
+.lte-provider-card:hover {
+  border-color: var(--accent-blue);
+}
+
+.provider-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.provider-card-header h4 {
+  color: var(--accent-blue-light);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.btn-small {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 0.85rem;
+}
+
+.remove-provider {
+  background: var(--error);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.remove-provider:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.add-provider-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+.add-provider-section small {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Responsive adjustments for multi-provider */
+@media (max-width: 768px) {
+  .provider-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .remove-provider {
+    width: 100%;
+  }
+
+  .add-provider-section button {
+    width: 100%;
+  }
+}

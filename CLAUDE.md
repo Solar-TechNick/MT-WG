@@ -146,6 +146,9 @@ All generators receive the same input structure:
 - **Database**: 18+ German providers with accurate APN settings
 - **Networks**: Telekom (6 variants), Vodafone (5), O2 (7)
 - **Fields**: APN, auth (PAP/CHAP), IP type (ipv4/ipv6/dual), DNS toggle
+- **Multi-Provider Support**: Add multiple APN profiles for failover/backup
+- **Route Priority**: Manual route distance configuration per provider
+- **Failover**: Automatic provider switching based on route distance
 
 ## UI/UX Architecture
 
