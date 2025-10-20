@@ -204,21 +204,25 @@ class WireGuardGenerator {
                     privateKey: clientPrivateKey,
                     address: client.ip,
                     dns: client.dns || data.dns || [],  // Use per-client DNS or fallback to global
-                    mtu: data.interface?.mtu || 1420
+                    mtu: client.mtu || data.interface?.mtu || 1420,  // Per-client MTU
+                    postUp: client.postUp || null,
+                    postDown: client.postDown || null,
+                    table: client.table || null,
+                    saveConfig: client.saveConfig || false
                 },
                 peer: {
                     comment: data.server.name,
                     publicKey: data.server.keys.publicKey,
-                    endpoint: `${data.server.endpoint}:${data.server.port}`,
+                    endpoint: client.customEndpoint || `${data.server.endpoint}:${data.server.port}`,  // Per-client endpoint
                     allowedIPs: client.allowedIPs || data.allowedIPs || '0.0.0.0/0',  // Use per-client AllowedIPs or fallback to global
-                    persistentKeepalive: data.options?.keepalive || 25
+                    persistentKeepalive: client.keepalive || data.options?.keepalive || 25  // Per-client keepalive
                 }
             };
-            
+
             if (clientPSK) {
                 config.peer.preSharedKey = clientPSK;
             }
-            
+
             configs.push(config);
         }
         
@@ -323,14 +327,33 @@ class WireGuardGenerator {
         if (config.interface.mtu) {
             content += `MTU = ${config.interface.mtu}\n`;
         }
-        
+
+        // Table setting (routing table)
+        if (config.interface.table) {
+            content += `Table = ${config.interface.table}\n`;
+        }
+
+        // SaveConfig setting
+        if (config.interface.saveConfig) {
+            content += `SaveConfig = true\n`;
+        }
+
         // Add PostUp/PostDown for routing if needed
         if (type === 'server' && config.options?.enableNAT) {
             const iface = config.interface.address.split('/')[0];
             content += `PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE\n`;
             content += `PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE\n`;
         }
-        
+
+        // Custom PostUp/PostDown scripts
+        if (config.interface.postUp) {
+            content += `PostUp = ${config.interface.postUp}\n`;
+        }
+
+        if (config.interface.postDown) {
+            content += `PostDown = ${config.interface.postDown}\n`;
+        }
+
         content += '\n';
         
         // Peer sections

@@ -355,6 +355,8 @@ class WireGuardMikroTikApp {
         const numClients = parseInt(this.numClients.value) || 0;
         const globalDns = this.dnsServers?.value || '1.1.1.1, 8.8.8.8';
         const globalAllowedIPs = this.allowedIPs?.value || '0.0.0.0/0';
+        const globalMtu = this.mtu?.value || '1420';
+        const globalKeepAlive = this.keepalive?.value || '25';
 
         this.clientKeysList.innerHTML = '';
 
@@ -362,7 +364,13 @@ class WireGuardMikroTikApp {
             const clientDiv = document.createElement('div');
             clientDiv.className = 'client-key-item';
             clientDiv.innerHTML = `
-                <h5>Client ${i}</h5>
+                <div class="client-header">
+                    <h5>Client ${i}</h5>
+                    <button type="button" class="btn btn-small btn-secondary toggle-advanced" data-client="${i}">
+                        ⚙️ Advanced Settings
+                    </button>
+                </div>
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="client${i}Name">Client Name</label>
@@ -393,8 +401,81 @@ class WireGuardMikroTikApp {
                     </div>
                     ` : ''}
                 </div>
+
+                <!-- Advanced Settings Panel -->
+                <div class="client-advanced-panel hidden" id="client${i}Advanced">
+                    <h6>Advanced Configuration</h6>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="client${i}MTU">MTU</label>
+                            <input type="number" id="client${i}MTU" value="${globalMtu}" min="1280" max="1500" placeholder="1420">
+                            <small>Maximum Transmission Unit</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="client${i}KeepAlive">Persistent KeepAlive</label>
+                            <input type="number" id="client${i}KeepAlive" value="${globalKeepAlive}" min="0" max="300" placeholder="25">
+                            <small>Seconds (0 to disable)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="client${i}CustomEndpoint">Custom Endpoint (Optional)</label>
+                            <input type="text" id="client${i}CustomEndpoint" placeholder="custom-server.com:51820">
+                            <small>Override server endpoint for this client</small>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="client${i}EnablePSK">
+                                Enable Pre-Shared Key for this client
+                            </label>
+                            <small>Additional layer of security</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="client${i}PostUp">PostUp Script (Optional)</label>
+                            <input type="text" id="client${i}PostUp" placeholder="iptables -A FORWARD ...">
+                            <small>Command to run after interface is up</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="client${i}PostDown">PostDown Script (Optional)</label>
+                            <input type="text" id="client${i}PostDown" placeholder="iptables -D FORWARD ...">
+                            <small>Command to run after interface is down</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="client${i}Table">Routing Table (Optional)</label>
+                            <input type="text" id="client${i}Table" placeholder="auto, off, or custom">
+                            <small>WireGuard routing table setting</small>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="client${i}SaveConfig">
+                                Save Config on shutdown
+                            </label>
+                            <small>SaveConfig = true in WireGuard config</small>
+                        </div>
+                    </div>
+                </div>
             `;
             this.clientKeysList.appendChild(clientDiv);
+
+            // Add event listener for advanced toggle
+            const toggleBtn = clientDiv.querySelector('.toggle-advanced');
+            toggleBtn.addEventListener('click', () => this.toggleClientAdvanced(i));
+        }
+    }
+
+    /**
+     * Toggle advanced settings for a client
+     */
+    toggleClientAdvanced(clientIndex) {
+        const advancedPanel = document.getElementById(`client${clientIndex}Advanced`);
+        const toggleBtn = document.querySelector(`.toggle-advanced[data-client="${clientIndex}"]`);
+
+        if (advancedPanel) {
+            advancedPanel.classList.toggle('hidden');
+
+            if (advancedPanel.classList.contains('hidden')) {
+                toggleBtn.textContent = '⚙️ Advanced Settings';
+            } else {
+                toggleBtn.textContent = '⚙️ Hide Advanced';
+            }
         }
     }
 
@@ -582,10 +663,20 @@ class WireGuardMikroTikApp {
                     publicKey: this.config.clientKeys[i]?.publicKey || '',   // Will be generated if empty
                     // Per-client DNS and AllowedIPs settings
                     dns: document.getElementById(`client${clientIndex}DNS`)?.value.split(',').map(s => s.trim()) || data.dns,
-                    allowedIPs: document.getElementById(`client${clientIndex}AllowedIPs`)?.value || data.allowedIPs
+                    allowedIPs: document.getElementById(`client${clientIndex}AllowedIPs`)?.value || data.allowedIPs,
+                    // Advanced per-client settings
+                    mtu: parseInt(document.getElementById(`client${clientIndex}MTU`)?.value) || data.interface.mtu,
+                    keepalive: parseInt(document.getElementById(`client${clientIndex}KeepAlive`)?.value) || data.options.keepalive,
+                    customEndpoint: document.getElementById(`client${clientIndex}CustomEndpoint`)?.value || null,
+                    postUp: document.getElementById(`client${clientIndex}PostUp`)?.value || null,
+                    postDown: document.getElementById(`client${clientIndex}PostDown`)?.value || null,
+                    table: document.getElementById(`client${clientIndex}Table`)?.value || null,
+                    saveConfig: document.getElementById(`client${clientIndex}SaveConfig`)?.checked || false
                 };
 
-                if (this.enableIndividualPSK?.checked || this.config.clientKeys[i]?.psk) {
+                // Check if individual PSK is enabled for this client
+                const enablePSKForClient = document.getElementById(`client${clientIndex}EnablePSK`)?.checked;
+                if (this.enableIndividualPSK?.checked || enablePSKForClient || this.config.clientKeys[i]?.psk) {
                     clientData.psk = this.config.clientKeys[i]?.psk || ''; // Will be generated if empty
                 }
 
