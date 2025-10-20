@@ -203,14 +203,14 @@ class WireGuardGenerator {
                 interface: {
                     privateKey: clientPrivateKey,
                     address: client.ip,
-                    dns: data.dns || [],
+                    dns: client.dns || data.dns || [],  // Use per-client DNS or fallback to global
                     mtu: data.interface?.mtu || 1420
                 },
                 peer: {
                     comment: data.server.name,
                     publicKey: data.server.keys.publicKey,
                     endpoint: `${data.server.endpoint}:${data.server.port}`,
-                    allowedIPs: data.allowedIPs || '0.0.0.0/0',
+                    allowedIPs: client.allowedIPs || data.allowedIPs || '0.0.0.0/0',  // Use per-client AllowedIPs or fallback to global
                     persistentKeepalive: data.options?.keepalive || 25
                 }
             };

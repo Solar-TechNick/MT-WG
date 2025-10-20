@@ -351,10 +351,13 @@ class WireGuardMikroTikApp {
 
     updateClientKeysList() {
         if (!this.clientKeysList) return;
-        
+
         const numClients = parseInt(this.numClients.value) || 0;
+        const globalDns = this.dnsServers?.value || '1.1.1.1, 8.8.8.8';
+        const globalAllowedIPs = this.allowedIPs?.value || '0.0.0.0/0';
+
         this.clientKeysList.innerHTML = '';
-        
+
         for (let i = 1; i <= numClients; i++) {
             const clientDiv = document.createElement('div');
             clientDiv.className = 'client-key-item';
@@ -364,6 +367,16 @@ class WireGuardMikroTikApp {
                     <div class="form-group">
                         <label for="client${i}Name">Client Name</label>
                         <input type="text" id="client${i}Name" value="Client-${i}" placeholder="Client name">
+                    </div>
+                    <div class="form-group">
+                        <label for="client${i}DNS">DNS Servers</label>
+                        <input type="text" id="client${i}DNS" value="${globalDns}" placeholder="1.1.1.1, 8.8.8.8">
+                        <small>Comma-separated DNS servers</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="client${i}AllowedIPs">Allowed IPs</label>
+                        <input type="text" id="client${i}AllowedIPs" value="${globalAllowedIPs}" placeholder="0.0.0.0/0">
+                        <small>0.0.0.0/0 for full tunnel</small>
                     </div>
                     <div class="form-group">
                         <label for="client${i}PrivateKey">Private Key</label>
@@ -561,17 +574,21 @@ class WireGuardMikroTikApp {
             
             data.clients = [];
             for (let i = 0; i < numClients; i++) {
+                const clientIndex = i + 1;
                 const clientData = {
-                    name: document.getElementById(`client${i + 1}Name`)?.value || `Client-${i + 1}`,
-                    ip: this.generateClientIP(i + 1),
+                    name: document.getElementById(`client${clientIndex}Name`)?.value || `Client-${clientIndex}`,
+                    ip: this.generateClientIP(clientIndex),
                     privateKey: this.config.clientKeys[i]?.privateKey || '', // Will be generated if empty
                     publicKey: this.config.clientKeys[i]?.publicKey || '',   // Will be generated if empty
+                    // Per-client DNS and AllowedIPs settings
+                    dns: document.getElementById(`client${clientIndex}DNS`)?.value.split(',').map(s => s.trim()) || data.dns,
+                    allowedIPs: document.getElementById(`client${clientIndex}AllowedIPs`)?.value || data.allowedIPs
                 };
-                
+
                 if (this.enableIndividualPSK?.checked || this.config.clientKeys[i]?.psk) {
                     clientData.psk = this.config.clientKeys[i]?.psk || ''; // Will be generated if empty
                 }
-                
+
                 data.clients.push(clientData);
             }
         } else {
