@@ -276,19 +276,19 @@ class WireGuardMikroTikApp {
         this.pageContents.forEach(page => {
             page.classList.remove('active');
         });
-        
+
         // Remove active class from all nav buttons
         this.navButtons.forEach(btn => {
             btn.classList.remove('active');
         });
-        
+
         // Show selected page
         const selectedPage = document.getElementById(`${pageName}-page`);
         if (selectedPage) {
             selectedPage.classList.add('active');
             selectedPage.classList.add('fade-in');
         }
-        
+
         // Activate corresponding nav button
         const activeBtn = document.querySelector(`[data-page="${pageName}"]`);
         if (activeBtn) {
@@ -1838,6 +1838,432 @@ class WireGuardMikroTikApp {
         this.pasteArea.classList.add('hidden');
         this.configTextInput.value = '';
         this.clearImport.classList.add('hidden');
+    }
+
+    /**
+     * WiFi Configuration Methods
+     */
+
+    toggleWiFiBand(band) {
+        const section = document.getElementById(`wifi-${band}-section`);
+        const checkbox = document.getElementById(`wifi-enable-${band}`);
+
+        if (checkbox && section) {
+            if (checkbox.checked) {
+                section.classList.remove('hidden');
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+    }
+
+    toggleGuestNetwork() {
+        const guestSection = document.getElementById('wifi-guest-section');
+        const guestCheckbox = document.getElementById('wifi-guest-network');
+
+        if (guestCheckbox && guestSection) {
+            if (guestCheckbox.checked) {
+                guestSection.classList.remove('hidden');
+                // Add first guest network if container is empty
+                const container = document.getElementById('wifi-guest-networks-container');
+                if (container && container.children.length === 0) {
+                    this.addGuestNetwork();
+                }
+            } else {
+                guestSection.classList.add('hidden');
+            }
+        }
+    }
+
+    addGuestNetwork() {
+        const container = document.getElementById('wifi-guest-networks-container');
+        if (!container) return;
+
+        const guestIndex = container.children.length + 1;
+        const guestDiv = document.createElement('div');
+        guestDiv.className = 'guest-network-item section';
+        guestDiv.setAttribute('data-guest-index', guestIndex);
+
+        guestDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4>Guest Network ${guestIndex}</h4>
+                <button type="button" class="btn btn-danger" onclick="app.removeGuestNetwork(${guestIndex})">
+                    🗑️ Remove
+                </button>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="wifi-guest${guestIndex}-ssid">SSID
+                        <button type="button" class="info-btn">?
+                            <div class="tooltip">Network name for guest WiFi</div>
+                        </button>
+                    </label>
+                    <input type="text" id="wifi-guest${guestIndex}-ssid" placeholder="Guest-Network-${guestIndex}">
+                </div>
+
+                <div class="form-group">
+                    <label for="wifi-guest${guestIndex}-password">Password
+                        <button type="button" class="info-btn">?
+                            <div class="tooltip">WiFi password (minimum 8 characters)</div>
+                        </button>
+                    </label>
+                    <input type="password" id="wifi-guest${guestIndex}-password" placeholder="Minimum 8 characters" minlength="8">
+                </div>
+
+                <div class="form-group">
+                    <label for="wifi-guest${guestIndex}-band">Frequency Band
+                        <button type="button" class="info-btn">?
+                            <div class="tooltip">Which frequency band to use for this guest network</div>
+                        </button>
+                    </label>
+                    <select id="wifi-guest${guestIndex}-band">
+                        <option value="2ghz">2.4GHz</option>
+                        <option value="5ghz">5GHz</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="wifi-guest${guestIndex}-security">Security
+                        <button type="button" class="info-btn">?
+                            <div class="tooltip">WiFi security protocol</div>
+                        </button>
+                    </label>
+                    <select id="wifi-guest${guestIndex}-security">
+                        <option value="wpa2-psk">WPA2-PSK (Recommended)</option>
+                        <option value="wpa3-psk">WPA3-PSK</option>
+                        <option value="wpa2-wpa3-psk">WPA2/WPA3-PSK (Mixed)</option>
+                    </select>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="wifi-guest${guestIndex}-isolation" checked>
+                        Client Isolation
+                    </label>
+                    <button type="button" class="info-btn">?
+                        <div class="tooltip">Prevent guest clients from communicating with each other</div>
+                    </button>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="wifi-guest${guestIndex}-block-lan" checked>
+                        Block LAN Access
+                    </label>
+                    <button type="button" class="info-btn">?
+                        <div class="tooltip">Block access to local network (internet-only)</div>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(guestDiv);
+    }
+
+    removeGuestNetwork(guestIndex) {
+        const container = document.getElementById('wifi-guest-networks-container');
+        if (!container) return;
+
+        const guestDiv = container.querySelector(`[data-guest-index="${guestIndex}"]`);
+        if (guestDiv) {
+            guestDiv.remove();
+            // Renumber remaining guest networks
+            this.renumberGuestNetworks();
+        }
+    }
+
+    renumberGuestNetworks() {
+        const container = document.getElementById('wifi-guest-networks-container');
+        if (!container) return;
+
+        const guestDivs = container.querySelectorAll('.guest-network-item');
+        guestDivs.forEach((div, index) => {
+            const newIndex = index + 1;
+            div.setAttribute('data-guest-index', newIndex);
+
+            // Update heading
+            const heading = div.querySelector('h4');
+            if (heading) {
+                heading.textContent = `Guest Network ${newIndex}`;
+            }
+
+            // Update remove button
+            const removeBtn = div.querySelector('.btn-danger');
+            if (removeBtn) {
+                removeBtn.setAttribute('onclick', `app.removeGuestNetwork(${newIndex})`);
+            }
+
+            // Update all IDs and placeholders
+            const inputs = div.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                const oldId = input.id;
+                if (oldId) {
+                    const newId = oldId.replace(/guest\d+/, `guest${newIndex}`);
+                    input.id = newId;
+
+                    // Update placeholder if it contains the old number
+                    if (input.placeholder && input.placeholder.includes('-')) {
+                        input.placeholder = input.placeholder.replace(/-\d+/, `-${newIndex}`);
+                    }
+
+                    // Update associated label
+                    const label = div.querySelector(`label[for="${oldId}"]`);
+                    if (label) {
+                        label.setAttribute('for', newId);
+                    }
+                }
+            });
+        });
+    }
+
+    async generateWiFiConfiguration() {
+        try {
+            // Collect WiFi configuration data
+            const data = this.collectWiFiData();
+
+            // Validate data
+            if (!this.validateWiFiData(data)) {
+                return;
+            }
+
+            // Generate configurations
+            const configs = window.WiFiGenerator.generate(data);
+
+            if (configs.length === 0) {
+                this.showNotification('Please configure at least one WiFi network', 'warning');
+                return;
+            }
+
+            // Store for download
+            this.lastWiFiConfigs = configs;
+
+            // Display configurations
+            this.displayWiFiConfigurations(configs);
+
+            // Show output section
+            const outputSection = document.getElementById('wifi-output-section');
+            if (outputSection) {
+                outputSection.classList.remove('hidden');
+                outputSection.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            this.showNotification('WiFi configuration generated successfully!', 'success');
+        } catch (error) {
+            console.error('WiFi configuration generation failed:', error);
+            this.showNotification('Failed to generate WiFi configuration: ' + error.message, 'error');
+        }
+    }
+
+    collectWiFiData() {
+        const enabled2ghz = document.getElementById('wifi-enable-2ghz')?.checked || false;
+        const enabled5ghz = document.getElementById('wifi-enable-5ghz')?.checked || false;
+
+        return {
+            // 2.4GHz settings (only if enabled)
+            ssid_2ghz: enabled2ghz ? (document.getElementById('wifi-ssid-2ghz')?.value || '') : '',
+            password_2ghz: enabled2ghz ? (document.getElementById('wifi-password-2ghz')?.value || '') : '',
+            security_2ghz: document.getElementById('wifi-security-2ghz')?.value || 'wpa2-psk',
+            channel_2ghz: document.getElementById('wifi-channel-2ghz')?.value || 'auto',
+            bandwidth_2ghz: document.getElementById('wifi-bandwidth-2ghz')?.value || '20mhz',
+            interface_2ghz: document.getElementById('wifi-interface-2ghz')?.value || 'wlan1',
+            hideSsid_2ghz: document.getElementById('wifi-hide-ssid-2ghz')?.checked || false,
+
+            // 5GHz settings (only if enabled)
+            ssid_5ghz: enabled5ghz ? (document.getElementById('wifi-ssid-5ghz')?.value || '') : '',
+            password_5ghz: enabled5ghz ? (document.getElementById('wifi-password-5ghz')?.value || '') : '',
+            security_5ghz: document.getElementById('wifi-security-5ghz')?.value || 'wpa2-psk',
+            channel_5ghz: document.getElementById('wifi-channel-5ghz')?.value || 'auto',
+            bandwidth_5ghz: document.getElementById('wifi-bandwidth-5ghz')?.value || '20/40/80mhz',
+            interface_5ghz: document.getElementById('wifi-interface-5ghz')?.value || 'wlan2',
+            hideSsid_5ghz: document.getElementById('wifi-hide-ssid-5ghz')?.checked || false,
+
+            // General settings
+            country: document.getElementById('wifi-country')?.value || 'germany',
+
+            // Guest networks (collect all)
+            guestEnabled: document.getElementById('wifi-guest-network')?.checked || false,
+            guestNetworks: this.collectGuestNetworks()
+        };
+    }
+
+    collectGuestNetworks() {
+        const container = document.getElementById('wifi-guest-networks-container');
+        if (!container) return [];
+
+        const guestNetworks = [];
+        const guestDivs = container.querySelectorAll('.guest-network-item');
+
+        guestDivs.forEach((div, index) => {
+            const guestIndex = index + 1;
+            const ssid = document.getElementById(`wifi-guest${guestIndex}-ssid`)?.value || '';
+            const password = document.getElementById(`wifi-guest${guestIndex}-password`)?.value || '';
+
+            // Only include if both SSID and password are filled
+            if (ssid && password) {
+                guestNetworks.push({
+                    ssid: ssid,
+                    password: password,
+                    band: document.getElementById(`wifi-guest${guestIndex}-band`)?.value || '2ghz',
+                    security: document.getElementById(`wifi-guest${guestIndex}-security`)?.value || 'wpa2-psk',
+                    isolation: document.getElementById(`wifi-guest${guestIndex}-isolation`)?.checked || true,
+                    blockLAN: document.getElementById(`wifi-guest${guestIndex}-block-lan`)?.checked || true,
+                    index: guestIndex
+                });
+            }
+        });
+
+        return guestNetworks;
+    }
+
+    validateWiFiData(data) {
+        // Check if at least one network is configured
+        const has2ghz = data.ssid_2ghz && data.password_2ghz;
+        const has5ghz = data.ssid_5ghz && data.password_5ghz;
+
+        if (!has2ghz && !has5ghz) {
+            this.showNotification('Please configure at least one WiFi network (2.4GHz or 5GHz)', 'error');
+            return false;
+        }
+
+        // Validate password length (minimum 8 characters for WPA2)
+        if (data.ssid_2ghz && data.password_2ghz && data.password_2ghz.length < 8) {
+            this.showNotification('2.4GHz password must be at least 8 characters', 'error');
+            return false;
+        }
+
+        if (data.ssid_5ghz && data.password_5ghz && data.password_5ghz.length < 8) {
+            this.showNotification('5GHz password must be at least 8 characters', 'error');
+            return false;
+        }
+
+        // Validate guest networks if enabled
+        if (data.guestEnabled && data.guestNetworks) {
+            for (let i = 0; i < data.guestNetworks.length; i++) {
+                const guest = data.guestNetworks[i];
+                if (guest.password.length < 8) {
+                    this.showNotification(`Guest network ${guest.index} password must be at least 8 characters`, 'error');
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    displayWiFiConfigurations(configs) {
+        const output = document.getElementById('wifi-output');
+        if (!output) return;
+
+        output.innerHTML = configs.map(config => `
+            <div class="config-section">
+                <div class="config-header">
+                    <h4>${config.name}</h4>
+                    <button class="copy-btn" onclick="app.copyToClipboard('${config.name}', \`${config.content.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">
+                        Copy
+                    </button>
+                </div>
+                <div class="config-content">
+                    <pre>${this.escapeHtml(config.content)}</pre>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    downloadWiFiConfig() {
+        if (!this.lastWiFiConfigs || this.lastWiFiConfigs.length === 0) {
+            this.showNotification('No configuration to download', 'warning');
+            return;
+        }
+
+        // Download all configs as separate files
+        this.lastWiFiConfigs.forEach(config => {
+            const filename = `${config.name.replace(/\s+/g, '-')}.rsc`;
+            window.Utils.downloadTextAsFile(config.content, filename, 'text/plain');
+        });
+
+        this.showNotification('WiFi configurations downloaded', 'success');
+    }
+
+    copyAllWiFiConfigs() {
+        if (!this.lastWiFiConfigs || this.lastWiFiConfigs.length === 0) {
+            this.showNotification('No configuration to copy', 'warning');
+            return;
+        }
+
+        const allContent = this.lastWiFiConfigs.map(config =>
+            `# ${config.name}\n${config.content}`
+        ).join('\n\n' + '='.repeat(60) + '\n\n');
+
+        window.Utils.copyToClipboard(allContent).then(success => {
+            if (success) {
+                this.showNotification('All WiFi configurations copied to clipboard', 'success');
+            } else {
+                this.showNotification('Failed to copy to clipboard', 'error');
+            }
+        });
+    }
+
+    resetWiFiForm() {
+        // Reset all form fields
+        const form = document.getElementById('wifi-page');
+        if (form) {
+            const inputs = form.querySelectorAll('input[type="text"], input[type="password"]');
+            inputs.forEach(input => {
+                if (input.id === 'wifi-interface-2ghz') {
+                    input.value = 'wlan1';
+                } else if (input.id === 'wifi-interface-5ghz') {
+                    input.value = 'wlan2';
+                } else {
+                    input.value = '';
+                }
+            });
+
+            const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                if (checkbox.id === 'wifi-enable-2ghz' || checkbox.id === 'wifi-enable-5ghz') {
+                    checkbox.checked = true;
+                } else if (checkbox.id === 'wifi-guest-isolation') {
+                    checkbox.checked = true;
+                } else {
+                    checkbox.checked = false;
+                }
+            });
+
+            // Reset selects to default
+            const selects = form.querySelectorAll('select');
+            selects.forEach(select => select.selectedIndex = 0);
+
+            // Show both network sections
+            const section2ghz = document.getElementById('wifi-2ghz-section');
+            const section5ghz = document.getElementById('wifi-5ghz-section');
+            if (section2ghz) section2ghz.classList.remove('hidden');
+            if (section5ghz) section5ghz.classList.remove('hidden');
+
+            // Clear and hide guest section
+            const guestSection = document.getElementById('wifi-guest-section');
+            const guestContainer = document.getElementById('wifi-guest-networks-container');
+            if (guestSection) {
+                guestSection.classList.add('hidden');
+            }
+            if (guestContainer) {
+                guestContainer.innerHTML = ''; // Clear all guest networks
+            }
+
+            // Hide output section
+            const outputSection = document.getElementById('wifi-output-section');
+            if (outputSection) {
+                outputSection.classList.add('hidden');
+            }
+        }
+
+        this.showNotification('WiFi form reset', 'info');
     }
 }
 

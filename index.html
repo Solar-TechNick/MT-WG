@@ -18,8 +18,8 @@
                 <span class="theme-label">Dark</span>
             </div>
             
-            <h1>MikroTik RouterOS Configurator <span class="version">v1.1.0</span></h1>
-            <p>Generate WireGuard VPN and LTE mobile configurations for MikroTik RouterOS</p>
+            <h1>MikroTik RouterOS Configurator <span class="version">v1.2.0</span></h1>
+            <p>Generate WireGuard VPN, LTE mobile, and WiFi configurations for MikroTik RouterOS</p>
             
             <nav class="main-nav">
                 <button class="nav-button active" data-page="wireguard">
@@ -27,6 +27,9 @@
                 </button>
                 <button class="nav-button" data-page="lte">
                     📡 LTE Mobile
+                </button>
+                <button class="nav-button" data-page="wifi">
+                    📶 WiFi Settings
                 </button>
                 <button class="nav-button" data-page="about">
                     ℹ️ About
@@ -537,6 +540,281 @@
                 </div>
             </div>
 
+            <!-- WiFi Settings Page -->
+            <div class="page-content" id="wifi-page">
+                <!-- WiFi Configuration Form -->
+                <div class="section">
+                    <h2>📶 WiFi Configuration</h2>
+                    <p class="section-description">Generate MikroTik RouterOS WiFi configuration for 2.4GHz and 5GHz networks</p>
+
+                    <!-- Network Selection -->
+                    <div class="form-grid">
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="wifi-enable-2ghz" checked onchange="app.toggleWiFiBand('2ghz')">
+                                Enable 2.4GHz Network
+                            </label>
+                            <button type="button" class="info-btn">?
+                                <div class="tooltip">Configure a 2.4GHz WiFi network (better range, slower speed)</div>
+                            </button>
+                        </div>
+
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="wifi-enable-5ghz" checked onchange="app.toggleWiFiBand('5ghz')">
+                                Enable 5GHz Network
+                            </label>
+                            <button type="button" class="info-btn">?
+                                <div class="tooltip">Configure a 5GHz WiFi network (faster speed, shorter range)</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2.4GHz Settings -->
+                    <div class="section" id="wifi-2ghz-section">
+                        <h3>2.4GHz Network Settings</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="wifi-ssid-2ghz">SSID
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">Network name for 2.4GHz WiFi</div>
+                                    </button>
+                                </label>
+                                <input type="text" id="wifi-ssid-2ghz" placeholder="MyNetwork-2.4GHz">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-password-2ghz">Password
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">WiFi password (minimum 8 characters for WPA2)</div>
+                                    </button>
+                                </label>
+                                <input type="password" id="wifi-password-2ghz" placeholder="Minimum 8 characters" minlength="8">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-security-2ghz">Security
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">WiFi security protocol</div>
+                                    </button>
+                                </label>
+                                <select id="wifi-security-2ghz">
+                                    <option value="wpa2-psk">WPA2-PSK (Recommended)</option>
+                                    <option value="wpa3-psk">WPA3-PSK</option>
+                                    <option value="wpa2-wpa3-psk">WPA2/WPA3-PSK (Mixed)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-channel-2ghz">Channel
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">WiFi channel (auto recommended, or select specific 1-11)</div>
+                                    </button>
+                                </label>
+                                <select id="wifi-channel-2ghz">
+                                    <option value="auto">Auto</option>
+                                    <option value="1">Channel 1</option>
+                                    <option value="6">Channel 6</option>
+                                    <option value="11">Channel 11</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-bandwidth-2ghz">Channel Width
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">20MHz recommended for 2.4GHz to avoid interference</div>
+                                    </button>
+                                </label>
+                                <select id="wifi-bandwidth-2ghz">
+                                    <option value="20mhz">20MHz (Recommended)</option>
+                                    <option value="20/40mhz">20/40MHz</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-interface-2ghz">Interface Name
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">RouterOS wireless interface name for 2.4GHz</div>
+                                    </button>
+                                </label>
+                                <input type="text" id="wifi-interface-2ghz" value="wlan1" placeholder="wlan1">
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="wifi-hide-ssid-2ghz">
+                                    Hide SSID
+                                </label>
+                                <button type="button" class="info-btn">?
+                                    <div class="tooltip">Hide network name from broadcast</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5GHz Settings -->
+                    <div class="section" id="wifi-5ghz-section">
+                        <h3>5GHz Network Settings</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="wifi-ssid-5ghz">SSID
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">Network name for 5GHz WiFi</div>
+                                    </button>
+                                </label>
+                                <input type="text" id="wifi-ssid-5ghz" placeholder="MyNetwork-5GHz">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-password-5ghz">Password
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">WiFi password (minimum 8 characters for WPA2)</div>
+                                    </button>
+                                </label>
+                                <input type="password" id="wifi-password-5ghz" placeholder="Minimum 8 characters" minlength="8">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-security-5ghz">Security
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">WiFi security protocol</div>
+                                    </button>
+                                </label>
+                                <select id="wifi-security-5ghz">
+                                    <option value="wpa2-psk">WPA2-PSK (Recommended)</option>
+                                    <option value="wpa3-psk">WPA3-PSK</option>
+                                    <option value="wpa2-wpa3-psk">WPA2/WPA3-PSK (Mixed)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-channel-5ghz">Channel
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">WiFi channel (auto recommended, or select specific)</div>
+                                    </button>
+                                </label>
+                                <select id="wifi-channel-5ghz">
+                                    <option value="auto">Auto</option>
+                                    <option value="36">Channel 36</option>
+                                    <option value="40">Channel 40</option>
+                                    <option value="44">Channel 44</option>
+                                    <option value="48">Channel 48</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-bandwidth-5ghz">Channel Width
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">40MHz or 80MHz recommended for 5GHz</div>
+                                    </button>
+                                </label>
+                                <select id="wifi-bandwidth-5ghz">
+                                    <option value="20/40mhz">20/40MHz</option>
+                                    <option value="20/40/80mhz">20/40/80MHz (Recommended)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi-interface-5ghz">Interface Name
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">RouterOS wireless interface name for 5GHz</div>
+                                    </button>
+                                </label>
+                                <input type="text" id="wifi-interface-5ghz" value="wlan2" placeholder="wlan2">
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="wifi-hide-ssid-5ghz">
+                                    Hide SSID
+                                </label>
+                                <button type="button" class="info-btn">?
+                                    <div class="tooltip">Hide network name from broadcast</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- General Settings -->
+                    <div class="section">
+                        <h3>General Settings</h3>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="wifi-country">Country Code
+                                    <button type="button" class="info-btn">?
+                                        <div class="tooltip">Country code for regulatory compliance (e.g., germany, united states)</div>
+                                    </button>
+                                </label>
+                                <select id="wifi-country">
+                                    <option value="germany">Germany</option>
+                                    <option value="united states">United States</option>
+                                    <option value="united kingdom">United Kingdom</option>
+                                    <option value="france">France</option>
+                                    <option value="spain">Spain</option>
+                                    <option value="italy">Italy</option>
+                                    <option value="poland">Poland</option>
+                                    <option value="austria">Austria</option>
+                                    <option value="switzerland">Switzerland</option>
+                                    <option value="netherlands">Netherlands</option>
+                                    <option value="belgium">Belgium</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="wifi-guest-network" onchange="app.toggleGuestNetwork()">
+                                    Enable Guest Network
+                                </label>
+                                <button type="button" class="info-btn">?
+                                    <div class="tooltip">Create separate guest WiFi with internet-only access</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Guest Network Settings -->
+                    <div class="section hidden" id="wifi-guest-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3>Guest Network Settings</h3>
+                            <button type="button" class="btn btn-secondary" onclick="app.addGuestNetwork()">
+                                ➕ Add Guest Network
+                            </button>
+                        </div>
+
+                        <div id="wifi-guest-networks-container">
+                            <!-- Guest networks will be added here dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <div class="button-group">
+                        <button type="button" id="generateWiFiConfig" class="btn btn-primary" onclick="app.generateWiFiConfiguration()">
+                            Generate WiFi Configuration
+                        </button>
+                        <button type="button" id="resetWiFiForm" class="btn btn-secondary" onclick="app.resetWiFiForm()">
+                            Reset Form
+                        </button>
+                    </div>
+                </div>
+
+                <!-- WiFi Configuration Output -->
+                <div class="section hidden" id="wifi-output-section">
+                    <h2>Generated Configuration</h2>
+
+                    <div id="wifi-output" class="config-output"></div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="app.downloadWiFiConfig()">
+                            📥 Download Configuration
+                        </button>
+                        <button class="btn btn-secondary" onclick="app.copyAllWiFiConfigs()">
+                            📋 Copy All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- About Page -->
             <div class="page-content" id="about-page">
                 <div class="section">
@@ -635,6 +913,7 @@
     <script src="js/vyos.js"></script>
     <script src="js/opnsense.js"></script>
     <script src="js/lte.js"></script>
+    <script src="js/wifi.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

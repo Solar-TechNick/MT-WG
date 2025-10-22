@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-10-23
+
+### Added
+- **WiFi Configuration Tab**: Complete WiFi settings management for MikroTik RouterOS
+  - Configure 2.4GHz and 5GHz networks independently
+  - Enable/disable checkboxes for each frequency band
+  - Advanced settings: security (WPA2/WPA3), channels, bandwidth, country code
+  - Hide SSID option for each network
+  - Interface name customization
+
+- **Multiple Guest Networks**: Support for unlimited guest WiFi networks
+  - Dynamic add/remove guest network forms
+  - Individual settings per guest network (SSID, password, band, security)
+  - Per-network client isolation option
+  - Per-network LAN blocking (internet-only access)
+  - Automatic renumbering when networks are removed
+  - Virtual AP configuration using MikroTik's master-interface feature
+
+- **WiFi Configuration Generator** (js/wifi.js)
+  - Generates MikroTik RouterOS scripts for 2.4GHz networks
+  - Generates MikroTik RouterOS scripts for 5GHz networks
+  - Generates individual scripts per guest network
+  - Combined complete configuration script
+  - Proper security profile creation
+  - Firewall rules for guest network isolation
+
+- **WiFi Form Features**
+  - Real-time form validation
+  - Show/hide network sections based on enable/disable checkboxes
+  - Password strength validation (minimum 8 characters)
+  - Download configurations as .rsc files
+  - Copy all configurations to clipboard
+  - Reset form functionality
+
+### Changed
+- Updated main page subtitle to include WiFi configurations
+- Improved form organization with collapsible sections
+- Enhanced user experience with dynamic form management
+
 ## [1.1.0] - 2025-10-22
 
 ### Added
