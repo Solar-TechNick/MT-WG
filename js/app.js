@@ -377,6 +377,11 @@ class WireGuardMikroTikApp {
                         <input type="text" id="client${i}Name" value="Client-${i}" placeholder="Client name">
                     </div>
                     <div class="form-group">
+                        <label for="client${i}IP">Client IP Address</label>
+                        <input type="text" id="client${i}IP" value="${this.generateClientIP(i)}" placeholder="10.0.0.2/24">
+                        <small>CIDR format (e.g., 10.0.0.2/24)</small>
+                    </div>
+                    <div class="form-group">
                         <label for="client${i}DNS">DNS Servers</label>
                         <input type="text" id="client${i}DNS" value="${globalDns}" placeholder="1.1.1.1, 8.8.8.8">
                         <small>Comma-separated DNS servers</small>
@@ -458,6 +463,77 @@ class WireGuardMikroTikApp {
             // Add event listener for advanced toggle
             const toggleBtn = clientDiv.querySelector('.toggle-advanced');
             toggleBtn.addEventListener('click', () => this.toggleClientAdvanced(i));
+
+            // Add event listener for IP validation
+            const ipInput = document.getElementById(`client${i}IP`);
+            if (ipInput) {
+                ipInput.addEventListener('blur', (e) => this.validateClientIP(e.target));
+                ipInput.addEventListener('input', (e) => {
+                    // Remove error styling while typing
+                    e.target.classList.remove('input-error');
+                });
+            }
+        }
+    }
+
+    /**
+     * Validate client IP address
+     */
+    validateClientIP(inputElement) {
+        const value = inputElement.value.trim();
+
+        if (!value) {
+            // Empty is OK - will use auto-generated IP
+            inputElement.classList.remove('input-error');
+            return true;
+        }
+
+        // Check if valid CIDR notation
+        if (!window.Utils.isValidCIDR(value)) {
+            inputElement.classList.add('input-error');
+            this.showNotification('Invalid IP address format. Use CIDR notation (e.g., 10.0.0.2/24)', 'error');
+            return false;
+        }
+
+        // Check if IP is within server subnet
+        const serverIP = this.serverIP?.value;
+        if (serverIP) {
+            const serverNetwork = this.getNetworkFromCIDR(serverIP);
+            const clientNetwork = this.getNetworkFromCIDR(value);
+
+            if (serverNetwork && clientNetwork && serverNetwork !== clientNetwork) {
+                inputElement.classList.add('input-error');
+                this.showNotification('Client IP must be in the same network as server', 'warning');
+                return false;
+            }
+        }
+
+        inputElement.classList.remove('input-error');
+        return true;
+    }
+
+    /**
+     * Extract network address from CIDR
+     */
+    getNetworkFromCIDR(cidr) {
+        try {
+            const [ip, prefix] = cidr.split('/');
+            const parts = ip.split('.').map(Number);
+            const prefixNum = parseInt(prefix);
+
+            // Calculate network address
+            const mask = (0xFFFFFFFF << (32 - prefixNum)) >>> 0;
+            const ipInt = (parts[0] << 24) + (parts[1] << 16) + (parts[2] << 8) + parts[3];
+            const networkInt = (ipInt & mask) >>> 0;
+
+            return [
+                (networkInt >>> 24) & 0xFF,
+                (networkInt >>> 16) & 0xFF,
+                (networkInt >>> 8) & 0xFF,
+                networkInt & 0xFF
+            ].join('.') + '/' + prefix;
+        } catch (error) {
+            return null;
         }
     }
 
@@ -658,7 +734,7 @@ class WireGuardMikroTikApp {
                 const clientIndex = i + 1;
                 const clientData = {
                     name: document.getElementById(`client${clientIndex}Name`)?.value || `Client-${clientIndex}`,
-                    ip: this.generateClientIP(clientIndex),
+                    ip: document.getElementById(`client${clientIndex}IP`)?.value || this.generateClientIP(clientIndex),
                     privateKey: this.config.clientKeys[i]?.privateKey || '', // Will be generated if empty
                     publicKey: this.config.clientKeys[i]?.publicKey || '',   // Will be generated if empty
                     // Per-client DNS and AllowedIPs settings

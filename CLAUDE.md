@@ -5,10 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Critical Rule
 
 **DON'T ASSUME - ALWAYS ASK QUESTIONS BEFORE IMPLEMENTING**
+**YOU ARE RUNNING IN A WSL!**   
 
 ## Project Overview
 
-Multi-platform WireGuard VPN and LTE mobile configuration generator. Pure client-side static web application (~5600 lines) generating professional configurations for **MikroTik RouterOS**, **VyOS**, and **OPNsense** with QR codes for mobile clients.
+Multi-platform WireGuard VPN and LTE mobile configuration generator. Pure client-side static web application (~6400 lines) generating professional configurations for **MikroTik RouterOS**, **VyOS**, and **OPNsense** with QR codes for mobile clients.
 
 **Status**: Production-ready. Repository: https://github.com/Solar-TechNick/MT-WG
 
@@ -17,6 +18,7 @@ Multi-platform WireGuard VPN and LTE mobile configuration generator. Pure client
 ```bash
 # No build step - pure static HTML/JS/CSS
 # Requires HTTPS or localhost for WebCrypto API
+# External dependencies loaded via CDN: jsPDF, JSZip
 
 python3 -m http.server 8080
 # Then visit: http://localhost:8080
@@ -27,29 +29,54 @@ open test-crypto.html    # Test key generation
 
 **No automated tests exist** - all testing is manual.
 
+## Deployment
+
+This is a static site with no backend requirements. Deploy to:
+- **GitHub Pages**: Push to `gh-pages` branch or configure in repo settings
+- **Netlify/Vercel**: Drop folder or connect repo
+- **Any web server**: Upload all files, ensure HTTPS for WebCrypto API
+
+**Requirements**: HTTPS (or localhost) for secure cryptographic operations.
+
 ## File Structure
 
 ```
 /
-├── index.html              # Main single-page app (32k lines, includes forms)
+├── index.html              # Main single-page app (639 lines)
 ├── styles.css              # CSS variables-based theming (dark/light toggle)
+├── test-crypto.html        # Crypto testing page
 ├── components/             # HTML form components (loaded dynamically)
-│   ├── wireguard-form.html
-│   └── lte-form.html
-└── js/
-    ├── app.js              # Main controller, event handling, UI orchestration
-    ├── wireguard.js        # Core WireGuard + multi-platform orchestrator
-    ├── vyos.js             # VyOS configuration generator
-    ├── opnsense.js         # OPNsense multi-format config generator
-    ├── lte.js              # German LTE provider database (18+ providers)
-    ├── crypto.js           # Curve25519 key generation (WebCrypto + fallback)
-    ├── import-parser.js    # Config import parser (WireGuard & MikroTik)
-    ├── qrcode.js           # QR code generation (primary)
-    ├── qr-offline.js       # QR code fallback
-    └── utils.js            # Validation, downloads, network calculations
+│   ├── wireguard-form.html # WireGuard configuration form (383 lines)
+│   └── lte-form.html       # LTE provider configuration form (188 lines)
+├── js/
+│   ├── app.js              # Main controller, event handling, UI orchestration (1774 lines)
+│   ├── wireguard.js        # Core WireGuard + multi-platform orchestrator (607 lines)
+│   ├── vyos.js             # VyOS configuration generator (399 lines)
+│   ├── opnsense.js         # OPNsense multi-format config generator (488 lines)
+│   ├── lte.js              # German LTE provider database (673 lines, 18+ providers)
+│   ├── crypto.js           # Curve25519 key generation (266 lines, WebCrypto + fallback)
+│   ├── import-parser.js    # Config import parser (372 lines, WireGuard & MikroTik)
+│   ├── qrcode.js           # QR code generation (269 lines, primary)
+│   ├── qr-offline.js       # QR code fallback (124 lines)
+│   └── utils.js            # Validation, downloads, network calculations (368 lines)
+└── .claude/
+    └── settings.local.json # Permissions for Claude Code (git, WebFetch, etc.)
 ```
 
 ## Architecture
+
+### Dynamic Component Loading
+
+The application uses dynamic HTML form loading to keep the main `index.html` modular:
+
+- `components/wireguard-form.html` - WireGuard VPN configuration form
+- `components/lte-form.html` - LTE mobile configuration form
+
+Forms are loaded at runtime and injected into the DOM. This separation allows:
+
+- Independent development of form components
+- Easier maintenance of complex form structures
+- Reduced initial page size
 
 ### Component Communication Flow
 
@@ -171,12 +198,19 @@ All generators receive the same input structure:
 
 ### Configuration Import System ([import-parser.js](js/import-parser.js) + [app.js:1305-1491](js/app.js#L1305-L1491))
 - **Formats Supported**: WireGuard `.conf` files, MikroTik `.rsc` scripts
-- **Import Methods**: File upload or paste text
+- **Import Methods**: File upload (`.conf`, `.rsc`, `.txt`) or paste text
 - **Workflow**: Parse → Preview → Apply to form fields
 - **Detection**: Auto-detects format via regex patterns
 - **Parsing**: Extracts server config, peers, interface settings, routing flags
 - **Application**: Pre-fills form fields, enables manual key input if keys found
 - **UI**: Import section at top of WireGuard page with preview/discard options
+- **Key Handling**: Imported private keys trigger manual key mode automatically
+
+### Per-Client Advanced Configuration
+- **Individual Settings**: Each client can have custom DNS servers and Allowed IPs
+- **Expandable Panels**: Collapsible configuration sections per client
+- **Override Behavior**: Per-client settings override global defaults
+- **UI Pattern**: Accordion-style panels in client keys management section
 
 ## Adding New Router Platforms
 
@@ -191,8 +225,20 @@ All generators receive the same input structure:
 1. **No automated tests** - manual testing only
 2. **Public key derivation** - simplified implementation ([crypto.js:58-63](js/crypto.js#L58-L63))
 3. **No backend** - 100% client-side, no persistence
-4. **QR size limits** - large configs may exceed capacity
-5. **Command validation** - verified against docs but not live-tested
+4. **QR size limits** - large configs may exceed QR code capacity
+5. **Command validation** - verified against docs but not live-tested on actual routers
+6. **Browser-only** - Requires modern browser, no CLI version
+
+## Claude Code Permissions
+
+This repository has pre-configured permissions in [.claude/settings.local.json](.claude/settings.local.json):
+- Git operations (init, add, commit, push, merge, stash, etc.)
+- WebFetch for WireGuard, VyOS, and OPNsense documentation
+- WebSearch for research
+- File operations (grep, find, mv, touch)
+- Python3 for local server
+
+These permissions allow Claude Code to work efficiently without repeated authorization prompts.
 
 ## Documentation
 

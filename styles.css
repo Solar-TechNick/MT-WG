@@ -111,6 +111,14 @@ header h1 {
   text-align: center;
 }
 
+header h1 .version {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  opacity: 0.7;
+  margin-left: var(--spacing-sm);
+}
+
 header p {
   color: var(--text-secondary);
   text-align: center;
@@ -350,6 +358,16 @@ input:checked + .theme-slider:before {
 
 .form-group input::placeholder {
   color: var(--text-muted);
+}
+
+.form-group input.input-error {
+  border-color: var(--error);
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.form-group input.input-error:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .form-group small {
