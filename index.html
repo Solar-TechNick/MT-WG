@@ -18,8 +18,8 @@
                 <span class="theme-label">Dark</span>
             </div>
             
-            <h1>MikroTik RouterOS Configurator <span class="version">v1.2.0</span></h1>
-            <p>Generate WireGuard VPN, LTE mobile, and WiFi configurations for MikroTik RouterOS</p>
+            <h1>MikroTik RouterOS Configurator <span class="version">v1.3.0</span></h1>
+            <p>Generate and apply WireGuard VPN, LTE mobile, and WiFi configurations for MikroTik RouterOS</p>
             
             <nav class="main-nav">
                 <button class="nav-button active" data-page="wireguard">
@@ -36,6 +36,142 @@
                 </button>
             </nav>
         </header>
+
+        <!-- Router Connection Panel -->
+        <div class="router-connection-container">
+            <button id="toggleRouterConnection" class="btn-router-connect" title="Connect to MikroTik Router">
+                🔌 Router Connection
+            </button>
+
+            <div id="routerConnectionPanel" class="router-panel hidden">
+                <div class="router-panel-header">
+                    <h3>MikroTik Router Connection</h3>
+                    <button id="closeRouterPanel" class="btn-close" title="Close">✕</button>
+                </div>
+
+                <div class="router-requirements">
+                    <h4>Requirements:</h4>
+                    <ul>
+                        <li>RouterOS v7.1 or newer</li>
+                        <li>Enable www-ssl service on router</li>
+                        <li>Access app via router's IP or enable CORS</li>
+                    </ul>
+                    <details>
+                        <summary>Setup Instructions</summary>
+                        <p>Run these commands on your router:</p>
+                        <code class="router-setup-code">
+                            /ip service set www-ssl disabled=no<br>
+                            /ip service set www-ssl port=443
+                        </code>
+                    </details>
+                    <details>
+                        <summary>Troubleshooting CORS Issues</summary>
+                        <p><strong>Most common issue:</strong> CORS blocks browser requests</p>
+                        <p><strong>Solutions:</strong></p>
+                        <ul style="font-size: 12px; margin: 8px 0;">
+                            <li>Upload this app to your router's web directory</li>
+                            <li>Or use HTTP (not HTTPS) without SSL</li>
+                            <li>Or check browser console (F12) for actual error</li>
+                        </ul>
+                    </details>
+                </div>
+
+                <div id="routerConnectionForm" class="router-connection-form">
+                    <div class="form-group">
+                        <label for="routerHost">Router IP/Hostname
+                            <button type="button" class="info-btn">?
+                                <div class="tooltip">IP address or hostname of your MikroTik router</div>
+                            </button>
+                        </label>
+                        <input type="text" id="routerHost" placeholder="192.168.88.1">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="routerUsername">Username
+                            <button type="button" class="info-btn">?
+                                <div class="tooltip">RouterOS admin username</div>
+                            </button>
+                        </label>
+                        <input type="text" id="routerUsername" value="admin" placeholder="admin">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="routerPassword">Password
+                            <button type="button" class="info-btn">?
+                                <div class="tooltip">RouterOS admin password</div>
+                            </button>
+                        </label>
+                        <input type="password" id="routerPassword" placeholder="Enter password">
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="routerPort">Port (Optional)
+                                <button type="button" class="info-btn">?
+                                    <div class="tooltip">REST API port (default: 443 for HTTPS, 80 for HTTP)</div>
+                                </button>
+                            </label>
+                            <input type="number" id="routerPort" placeholder="443" min="1" max="65535">
+                        </div>
+
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="routerUseSSL" checked>
+                                Use HTTPS (SSL)
+                            </label>
+                            <button type="button" class="info-btn">?
+                                <div class="tooltip">Use HTTPS for secure connection (recommended)</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="button" id="connectRouter" class="btn btn-primary">
+                            🔌 Connect
+                        </button>
+                        <button type="button" id="testRouter" class="btn btn-secondary" disabled>
+                            🧪 Test Connection
+                        </button>
+                        <button type="button" id="disconnectRouter" class="btn btn-danger" disabled>
+                            ⚠️ Disconnect
+                        </button>
+                    </div>
+                </div>
+
+                <div id="routerConnectionStatus" class="router-status hidden">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Not Connected</span>
+                    </div>
+                </div>
+
+                <div id="routerSystemInfo" class="router-system-info hidden">
+                    <h4>Router Information</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Identity:</span>
+                            <span class="info-value" id="routerIdentity">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Model:</span>
+                            <span class="info-value" id="routerModel">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Version:</span>
+                            <span class="info-value" id="routerVersion">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Uptime:</span>
+                            <span class="info-value" id="routerUptime">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">CPU Load:</span>
+                            <span class="info-value" id="routerCPU">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <main>
             <!-- WireGuard VPN Page -->
@@ -337,6 +473,7 @@
                         <button class="btn btn-success" onclick="app.copyAllConfigurations()">Copy All Configurations</button>
                         <button class="btn btn-secondary" onclick="app.downloadQRCodes()">Download QR Codes</button>
                         <button class="btn btn-warning" onclick="app.downloadAsPDF()">Download as PDF</button>
+                        <button id="applyWireGuardToRouter" class="btn btn-primary btn-apply-router" onclick="app.applyWireGuardToRouter()" disabled>🚀 Apply to Router</button>
                     </div>
                 </div>
             </div>
@@ -536,6 +673,12 @@
                     <div class="tab-content active" id="lte-script-tab">
                         <h3>MikroTik RouterOS LTE Configuration Script</h3>
                         <div id="lteScriptOutput"></div>
+                    </div>
+
+                    <div class="button-group" style="margin-top: 1rem;">
+                        <button id="applyLTEToRouter" class="btn btn-primary btn-apply-router" onclick="app.applyLTEToRouter()" disabled>
+                            🚀 Apply to Router
+                        </button>
                     </div>
                 </div>
             </div>
@@ -811,6 +954,9 @@
                         <button class="btn btn-secondary" onclick="app.copyAllWiFiConfigs()">
                             📋 Copy All
                         </button>
+                        <button id="applyWiFiToRouter" class="btn btn-success btn-apply-router" onclick="app.applyWiFiToRouter()" disabled>
+                            🚀 Apply to Router
+                        </button>
                     </div>
                 </div>
             </div>
@@ -847,8 +993,7 @@
     <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="demo/qr-offline.js"></script>
-    
+
     <!-- QR Code Setup -->
     <script>
         // QR Code wrapper to use qrcode-generator library
@@ -909,6 +1054,7 @@
     <script src="js/utils.js"></script>
     <script src="js/crypto.js"></script>
     <script src="js/import-parser.js"></script>
+    <script src="js/mikrotik-api.js"></script>
     <script src="js/wireguard.js"></script>
     <script src="js/vyos.js"></script>
     <script src="js/opnsense.js"></script>

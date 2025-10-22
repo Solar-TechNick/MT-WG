@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-10-23
+
+### Added
+- **MikroTik REST API Integration**: Direct configuration application to routers
+  - Full REST API client implementation (js/mikrotik-api.js)
+  - HTTP Basic Authentication support
+  - Support for RouterOS v7.1+ REST API
+  - Command execution via REST endpoints
+  - Configuration script parsing and application
+
+- **Router Connection Panel**: Floating connection interface
+  - Router IP/hostname configuration
+  - Username and password authentication
+  - HTTP/HTTPS protocol selection with port override
+  - Connection status indicator (green/red dot)
+  - System information display (identity, model, version, uptime, CPU load)
+  - Session persistence (connection info saved, password excluded)
+  - Test connection functionality
+
+- **Apply to Router Functionality**: One-click configuration deployment
+  - "Apply to Router" buttons in WireGuard, WiFi, and LTE output sections
+  - Real-time progress feedback with command execution counts
+  - Automatic enabling/disabling based on connection status
+  - Detailed success/error notifications
+  - Command-by-command result reporting
+
+- **CORS Proxy Server** (cors-proxy.py): Solves browser CORS restrictions
+  - Python-based proxy server on port 8081
+  - Routes browser requests to router avoiding CORS blocks
+  - Support for all HTTP methods (GET, POST, PUT, DELETE, PATCH)
+  - SSL certificate bypass for testing
+  - Automatic proxy detection and usage
+
+- **Setup Instructions and Troubleshooting**:
+  - Requirements checklist in connection panel
+  - Expandable setup instructions with RouterOS commands
+  - CORS troubleshooting guide
+  - Detailed error messages with solutions
+  - Theme-aware code block styling (dark/light mode)
+
+### Changed
+- Updated subtitle to include "apply" functionality
+- Enhanced error handling with specific messages for authentication, network, and CORS issues
+- Improved API response handling for both array and object formats
+- Added comprehensive console logging for debugging
+- Updated version to v1.3.0
+
+### Technical Details
+- **New Files**:
+  - `js/mikrotik-api.js` (449 lines) - REST API client
+  - `cors-proxy.py` (149 lines) - CORS proxy server
+- **Modified Files**:
+  - `index.html` (+150 lines) - Connection UI and apply buttons
+  - `js/app.js` (+415 lines) - Connection management and apply methods
+  - `styles.css` (+279 lines) - Router connection panel styling
+- **Total Changes**: 1,442 lines added across 5 files
+
+### Requirements
+- RouterOS v7.1 or newer
+- www or www-ssl service enabled on router
+- Python 3 for CORS proxy (optional, for browser CORS bypass)
+
 ## [1.2.0] - 2025-10-23
 
 ### Added

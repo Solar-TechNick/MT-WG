@@ -1072,3 +1072,282 @@ textarea:focus-visible {
     width: 100%;
   }
 }
+
+/* =====================================================
+   MikroTik Router Connection Styles
+   ===================================================== */
+
+.router-connection-container {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.btn-router-connect {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.btn-router-connect:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.router-panel {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: var(--bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+}
+
+.router-panel.hidden {
+  display: none;
+}
+
+.router-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.router-panel-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-close:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.router-requirements {
+  padding: var(--spacing-md);
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+  border-left: 3px solid var(--primary);
+}
+
+.router-requirements h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.router-requirements ul {
+  margin: 0 0 var(--spacing-sm) 0;
+  padding-left: var(--spacing-lg);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.router-requirements ul li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.router-requirements details {
+  margin-top: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.router-requirements summary {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  list-style: none;
+  user-select: none;
+}
+
+.router-requirements summary::-webkit-details-marker {
+  display: none;
+}
+
+.router-requirements summary::before {
+  content: "▶ ";
+  display: inline-block;
+  margin-right: 4px;
+  transition: transform 0.2s;
+}
+
+.router-requirements details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.router-requirements p {
+  margin: var(--spacing-xs) 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.router-setup-code {
+  display: block;
+  padding: var(--spacing-sm);
+  margin: var(--spacing-sm) 0;
+  border-radius: var(--border-radius);
+  background: var(--hover-bg);
+  border: 1px solid var(--border-color);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.router-connection-form {
+  margin-bottom: var(--spacing-lg);
+}
+
+.router-status {
+  padding: var(--spacing-md);
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-md);
+}
+
+.router-status.hidden {
+  display: none;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.router-system-info {
+  padding: var(--spacing-md);
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+.router-system-info.hidden {
+  display: none;
+}
+
+.router-system-info h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.info-grid {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+
+.btn-success:disabled {
+  background: #6b7280;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-apply-router {
+  position: relative;
+}
+
+.btn-apply-router:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for router connection panel */
+@media (max-width: 768px) {
+  .router-connection-container {
+    top: 80px;
+    right: 10px;
+  }
+
+  .router-panel {
+    width: 90vw;
+    max-width: 350px;
+  }
+}

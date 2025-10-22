@@ -19,11 +19,17 @@ class WireGuardMikroTikApp {
         this.initializeElements();
         this.attachEventListeners();
         this.initializeTheme();
+        this.initializeRouterConnection();
         this.generateInitialKeys();
         this.updateClientSubnet();
         this.toggleDnsServerFields(); // Initialize DNS fields visibility
         this.showPage('wireguard');
-        
+
+        // Enable CORS proxy by default (can be disabled if not needed)
+        if (window.mikrotikAPI) {
+            window.mikrotikAPI.enableProxy();
+        }
+
         // Initialize tooltips after everything is loaded
         setTimeout(() => {
             this.initializeTooltips();
@@ -2264,6 +2270,413 @@ class WireGuardMikroTikApp {
         }
 
         this.showNotification('WiFi form reset', 'info');
+    }
+
+    // =====================================================
+    // MikroTik Router Connection Methods
+    // =====================================================
+
+    initializeRouterConnection() {
+        // Initialize router connection UI elements and event listeners
+        const toggleBtn = document.getElementById('toggleRouterConnection');
+        const closeBtn = document.getElementById('closeRouterPanel');
+        const connectBtn = document.getElementById('connectRouter');
+        const testBtn = document.getElementById('testRouter');
+        const disconnectBtn = document.getElementById('disconnectRouter');
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => this.toggleRouterPanel());
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.toggleRouterPanel());
+        }
+
+        if (connectBtn) {
+            connectBtn.addEventListener('click', () => this.connectToRouter());
+        }
+
+        if (testBtn) {
+            testBtn.addEventListener('click', () => this.testRouterConnection());
+        }
+
+        if (disconnectBtn) {
+            disconnectBtn.addEventListener('click', () => this.disconnectFromRouter());
+        }
+
+        // Load saved connection info from session storage (if any)
+        this.loadRouterConnectionInfo();
+    }
+
+    toggleRouterPanel() {
+        const panel = document.getElementById('routerConnectionPanel');
+        if (panel) {
+            panel.classList.toggle('hidden');
+        }
+    }
+
+    loadRouterConnectionInfo() {
+        // Load connection info from session storage
+        const savedHost = sessionStorage.getItem('routerHost');
+        const savedUsername = sessionStorage.getItem('routerUsername');
+        const savedUseSSL = sessionStorage.getItem('routerUseSSL');
+
+        if (savedHost) {
+            const hostInput = document.getElementById('routerHost');
+            if (hostInput) hostInput.value = savedHost;
+        }
+
+        if (savedUsername) {
+            const usernameInput = document.getElementById('routerUsername');
+            if (usernameInput) usernameInput.value = savedUsername;
+        }
+
+        if (savedUseSSL !== null) {
+            const sslCheckbox = document.getElementById('routerUseSSL');
+            if (sslCheckbox) sslCheckbox.checked = savedUseSSL === 'true';
+        }
+    }
+
+    saveRouterConnectionInfo(host, username, useSSL) {
+        // Save connection info to session storage (not password for security)
+        sessionStorage.setItem('routerHost', host);
+        sessionStorage.setItem('routerUsername', username);
+        sessionStorage.setItem('routerUseSSL', useSSL.toString());
+    }
+
+    async connectToRouter() {
+        const host = document.getElementById('routerHost')?.value.trim();
+        const username = document.getElementById('routerUsername')?.value.trim();
+        const password = document.getElementById('routerPassword')?.value;
+        const port = document.getElementById('routerPort')?.value;
+        const useSSL = document.getElementById('routerUseSSL')?.checked;
+
+        // Validation
+        if (!host) {
+            this.showNotification('Please enter router IP or hostname', 'error');
+            return;
+        }
+
+        if (!username) {
+            this.showNotification('Please enter username', 'error');
+            return;
+        }
+
+        if (!password) {
+            this.showNotification('Please enter password', 'error');
+            return;
+        }
+
+        // Disable connect button and show loading state
+        const connectBtn = document.getElementById('connectRouter');
+        if (connectBtn) {
+            connectBtn.disabled = true;
+            connectBtn.textContent = '🔄 Connecting...';
+        }
+
+        this.showNotification('Connecting to router...', 'info');
+
+        try {
+            // Attempt connection
+            const portNum = port ? parseInt(port) : null;
+            const success = await window.mikrotikAPI.connect(host, username, password, portNum, useSSL);
+
+            if (success) {
+                this.showNotification('Successfully connected to router!', 'success');
+
+                // Save connection info (not password)
+                this.saveRouterConnectionInfo(host, username, useSSL);
+
+                // Update UI
+                this.updateRouterConnectionStatus(true);
+
+                // Enable test and disconnect buttons
+                const testBtn = document.getElementById('testRouter');
+                const disconnectBtn = document.getElementById('disconnectRouter');
+                if (testBtn) testBtn.disabled = false;
+                if (disconnectBtn) disconnectBtn.disabled = false;
+
+                // Get and display system info
+                await this.displayRouterSystemInfo();
+
+                // Enable apply buttons in configuration outputs
+                this.enableApplyButtons();
+            } else {
+                this.showNotification('Connection failed - no response from router', 'error');
+                this.updateRouterConnectionStatus(false);
+            }
+        } catch (error) {
+            console.error('Connection error:', error);
+            this.showNotification(`Connection failed: ${error.message}`, 'error');
+            this.updateRouterConnectionStatus(false);
+        } finally {
+            // Re-enable connect button
+            if (connectBtn) {
+                connectBtn.disabled = false;
+                connectBtn.textContent = '🔌 Connect';
+            }
+        }
+    }
+
+    async testRouterConnection() {
+        if (!window.mikrotikAPI.isConnected()) {
+            this.showNotification('Not connected to router', 'error');
+            return;
+        }
+
+        const testBtn = document.getElementById('testRouter');
+        if (testBtn) {
+            testBtn.disabled = true;
+            testBtn.textContent = '🧪 Testing...';
+        }
+
+        try {
+            const result = await window.mikrotikAPI.testConnection();
+
+            if (result.success) {
+                this.showNotification('Connection test successful!', 'success');
+                await this.displayRouterSystemInfo();
+            } else {
+                this.showNotification(`Connection test failed: ${result.error}`, 'error');
+                this.updateRouterConnectionStatus(false);
+            }
+        } catch (error) {
+            console.error('Test error:', error);
+            this.showNotification(`Connection test failed: ${error.message}`, 'error');
+            this.updateRouterConnectionStatus(false);
+        } finally {
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.textContent = '🧪 Test Connection';
+            }
+        }
+    }
+
+    disconnectFromRouter() {
+        if (window.mikrotikAPI) {
+            window.mikrotikAPI.disconnect();
+        }
+
+        this.updateRouterConnectionStatus(false);
+        this.hideRouterSystemInfo();
+
+        // Disable test and disconnect buttons
+        const testBtn = document.getElementById('testRouter');
+        const disconnectBtn = document.getElementById('disconnectRouter');
+        if (testBtn) testBtn.disabled = true;
+        if (disconnectBtn) disconnectBtn.disabled = true;
+
+        // Disable apply buttons
+        this.disableApplyButtons();
+
+        this.showNotification('Disconnected from router', 'info');
+    }
+
+    updateRouterConnectionStatus(connected) {
+        const statusDiv = document.getElementById('routerConnectionStatus');
+        const statusDot = statusDiv?.querySelector('.status-dot');
+        const statusText = statusDiv?.querySelector('.status-text');
+
+        if (statusDiv) {
+            statusDiv.classList.remove('hidden');
+        }
+
+        if (statusDot) {
+            if (connected) {
+                statusDot.style.backgroundColor = '#10b981'; // Green
+            } else {
+                statusDot.style.backgroundColor = '#ef4444'; // Red
+            }
+        }
+
+        if (statusText) {
+            statusText.textContent = connected ? 'Connected' : 'Not Connected';
+        }
+    }
+
+    async displayRouterSystemInfo() {
+        try {
+            const info = await window.mikrotikAPI.getSystemInfo();
+
+            const infoDiv = document.getElementById('routerSystemInfo');
+            if (infoDiv) {
+                infoDiv.classList.remove('hidden');
+            }
+
+            // Update info fields
+            const identityEl = document.getElementById('routerIdentity');
+            const modelEl = document.getElementById('routerModel');
+            const versionEl = document.getElementById('routerVersion');
+            const uptimeEl = document.getElementById('routerUptime');
+            const cpuEl = document.getElementById('routerCPU');
+
+            if (identityEl) identityEl.textContent = info.identity || 'Unknown';
+            if (modelEl) modelEl.textContent = info.model || 'Unknown';
+            if (versionEl) versionEl.textContent = info.version || 'Unknown';
+            if (uptimeEl) uptimeEl.textContent = info.uptime || 'Unknown';
+            if (cpuEl) cpuEl.textContent = info.cpuLoad ? `${info.cpuLoad}%` : 'Unknown';
+
+        } catch (error) {
+            console.error('Failed to get system info:', error);
+        }
+    }
+
+    hideRouterSystemInfo() {
+        const infoDiv = document.getElementById('routerSystemInfo');
+        if (infoDiv) {
+            infoDiv.classList.add('hidden');
+        }
+    }
+
+    enableApplyButtons() {
+        // Enable all "Apply to Router" buttons
+        const applyButtons = document.querySelectorAll('.btn-apply-router');
+        applyButtons.forEach(btn => {
+            btn.disabled = false;
+        });
+    }
+
+    disableApplyButtons() {
+        // Disable all "Apply to Router" buttons
+        const applyButtons = document.querySelectorAll('.btn-apply-router');
+        applyButtons.forEach(btn => {
+            btn.disabled = true;
+        });
+    }
+
+    async applyWireGuardToRouter() {
+        if (!window.mikrotikAPI.isConnected()) {
+            this.showNotification('Please connect to router first', 'error');
+            return;
+        }
+
+        if (!this.lastMikrotikConfig) {
+            this.showNotification('Please generate configuration first', 'error');
+            return;
+        }
+
+        const applyBtn = document.getElementById('applyWireGuardToRouter');
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.textContent = '⏳ Applying...';
+        }
+
+        try {
+            this.showNotification('Applying WireGuard configuration to router...', 'info');
+
+            const result = await window.mikrotikAPI.applyWireGuardConfig(this.lastMikrotikConfig);
+
+            // Check results
+            const failed = result.filter(r => !r.success);
+            const succeeded = result.filter(r => r.success);
+
+            if (failed.length === 0) {
+                this.showNotification(`WireGuard configuration applied successfully! (${succeeded.length} commands executed)`, 'success');
+            } else {
+                this.showNotification(`Configuration partially applied: ${succeeded.length} succeeded, ${failed.length} failed`, 'warning');
+                console.error('Failed commands:', failed);
+            }
+
+        } catch (error) {
+            console.error('Apply error:', error);
+            this.showNotification(`Failed to apply configuration: ${error.message}`, 'error');
+        } finally {
+            if (applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.textContent = '🚀 Apply to Router';
+            }
+        }
+    }
+
+    async applyWiFiToRouter() {
+        if (!window.mikrotikAPI.isConnected()) {
+            this.showNotification('Please connect to router first', 'error');
+            return;
+        }
+
+        if (!this.lastWiFiConfigs || this.lastWiFiConfigs.length === 0) {
+            this.showNotification('Please generate WiFi configuration first', 'error');
+            return;
+        }
+
+        const applyBtn = document.getElementById('applyWiFiToRouter');
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.textContent = '⏳ Applying...';
+        }
+
+        try {
+            this.showNotification('Applying WiFi configuration to router...', 'info');
+
+            // Combine all WiFi configs into one script
+            const combinedScript = this.lastWiFiConfigs.map(config => config.content).join('\n\n');
+
+            const result = await window.mikrotikAPI.applyWiFiConfig(combinedScript);
+
+            // Check results
+            const failed = result.filter(r => !r.success);
+            const succeeded = result.filter(r => r.success);
+
+            if (failed.length === 0) {
+                this.showNotification(`WiFi configuration applied successfully! (${succeeded.length} commands executed)`, 'success');
+            } else {
+                this.showNotification(`Configuration partially applied: ${succeeded.length} succeeded, ${failed.length} failed`, 'warning');
+                console.error('Failed commands:', failed);
+            }
+
+        } catch (error) {
+            console.error('Apply error:', error);
+            this.showNotification(`Failed to apply configuration: ${error.message}`, 'error');
+        } finally {
+            if (applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.textContent = '🚀 Apply to Router';
+            }
+        }
+    }
+
+    async applyLTEToRouter() {
+        if (!window.mikrotikAPI.isConnected()) {
+            this.showNotification('Please connect to router first', 'error');
+            return;
+        }
+
+        if (!this.lastLTEConfig) {
+            this.showNotification('Please generate LTE configuration first', 'error');
+            return;
+        }
+
+        const applyBtn = document.getElementById('applyLTEToRouter');
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.textContent = '⏳ Applying...';
+        }
+
+        try {
+            this.showNotification('Applying LTE configuration to router...', 'info');
+
+            const result = await window.mikrotikAPI.applyLTEConfig(this.lastLTEConfig);
+
+            // Check results
+            const failed = result.filter(r => !r.success);
+            const succeeded = result.filter(r => r.success);
+
+            if (failed.length === 0) {
+                this.showNotification(`LTE configuration applied successfully! (${succeeded.length} commands executed)`, 'success');
+            } else {
+                this.showNotification(`Configuration partially applied: ${succeeded.length} succeeded, ${failed.length} failed`, 'warning');
+                console.error('Failed commands:', failed);
+            }
+
+        } catch (error) {
+            console.error('Apply error:', error);
+            this.showNotification(`Failed to apply configuration: ${error.message}`, 'error');
+        } finally {
+            if (applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.textContent = '🚀 Apply to Router';
+            }
+        }
     }
 }
 
